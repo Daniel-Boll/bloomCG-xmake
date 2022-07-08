@@ -12,7 +12,8 @@
 #include "GLFW/glfw3.h"
 #include "ImGuizmo.h"
 
-const GLuint WIDTH = 1920 / 2, HEIGHT = 1080 / 2;
+const int ratio = 2;
+const GLuint WIDTH = 1920 / ratio, HEIGHT = 1080 / ratio;
 
 // Forward declaration
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -143,36 +144,52 @@ int main(void) {
     ImGuizmo::BeginFrame();
 
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+
+    ImGui::Begin("ViewPort");
+    {
+      // Using a Child allow to fill all the space of the window.
+      // It also allows customization
+      ImGui::BeginChild("GameRender");
+      {
+        // Get the size of the child (i.e. the whole draw size of the windows).
+        ImVec2 wsize = ImGui::GetWindowSize();
+        // Because I use the texture from OpenGL, I need to invert the V from the UV.
+        ImGui::Image((void*)(intptr_t)tex, wsize, ImVec2(0, 1), ImVec2(1, 0));
+
+        // Get this viewport in ImGui
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImDrawList* viewportDrawList = ImGui::GetWindowDrawList();
+
+        // Get the position of the viewport
+        ImVec2 viewportPos = ImGui::GetWindowPos();
+
+        // Get this window width and height.
+        bloom::Renderer::setViewportDrawList(viewportDrawList);
+        bloom::Renderer::setViewportSize(wsize.x, wsize.y);
+        bloom::Renderer::setViewportPosition(viewportPos.x, viewportPos.y);
+      }
+      ImGui::EndChild();
+    }
+    ImGui::End();
+
     if (currentScene) {
       GLCall(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
       GLCall(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0));
       currentScene->onSceneRender();
 
       ImGui::Begin("BloomGL");
-      if (currentScene != menu && ImGui::ArrowButton("##left", ImGuiDir_Left)) {
-        delete currentScene;
-        currentScene = menu;
-      }
+      {
+        if (currentScene != menu && ImGui::ArrowButton("##left", ImGuiDir_Left)) {
+          delete currentScene;
+          currentScene = menu;
+        }
 
-      GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-      currentScene->onImGuiRender();
-      renderer.clear();
+        GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+        currentScene->onImGuiRender();
+        renderer.clear();
+      }
       ImGui::End();
     }
-
-    ImGui::Begin("ViewPort");
-    {
-      // Using a Child allow to fill all the space of the window.
-      // It also alows customization
-      ImGui::BeginChild("GameRender");
-      // Get the size of the child (i.e. the whole draw size of the windows).
-      ImVec2 wsize = ImGui::GetWindowSize();
-      // Because I use the texture from OpenGL, I need to invert the V from the UV.
-      ImGui::Image((void*)(intptr_t)tex, wsize, ImVec2(0, 1), ImVec2(1, 0));
-
-      ImGui::EndChild();
-    }
-    ImGui::End();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -47,6 +47,28 @@ namespace bloom {
     void setSectorCount(uint16_t sectorCount);
     void setStackCount(uint16_t stackCount);
 
+    glm::vec3 getPosition();
+    void setPosition(glm::vec3 position);
+
+    // Functionalities
+    void draw();
+
+    // Debug
+    void print();
+
+  private:
+    // Private member functions
+    void bindBuffers();
+
+    void buildVertices();
+    void buildVertexData();
+
+    void clearVertex();
+
+    void addPosition(float x, float y, float z);
+    void addNormal(float x, float y, float z);
+    void addTextureCoordinates(float s, float t);
+
     // Vertex data
     uint16_t getPositionCount() const {
       return (uint16_t)m_positions.size() / Sphere::POSITIONS_PER_VERTEX;
@@ -69,24 +91,8 @@ namespace bloom {
     const uint32_t* getIndices() const { return m_indices.data(); }
     const float* getVertexData() const { return m_vertexData.data(); }
 
-    // Functionalities
-    void draw();
-
-    // Debug
-    void print();
-
-  private:
-    // Private member functions
-    void bindBuffers();
-
-    void buildVertices();
-    void buildVertexData();
-
-    void clearVertex();
-
-    void addPosition(float x, float y, float z);
-    void addNormal(float x, float y, float z);
-    void addTextureCoordinates(float s, float t);
+    // Shift vertex based on new center position
+    void shiftVertex();
 
     void addIndices(uint32_t a, uint32_t b, uint32_t c);
 

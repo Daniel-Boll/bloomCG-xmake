@@ -1,8 +1,7 @@
 #pragma once
 
+#include <bloomCG/core/common.hpp>
 #include <tuple>
-
-#include "fmt/core.h"
 
 namespace bloom {
   class Input {

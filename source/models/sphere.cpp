@@ -89,13 +89,14 @@ namespace bloom {
     for (uint16_t i = 0; i <= m_stackCount; i++) {
       float stackAngle = M_PI / 2 - i * stackStep;
       float xy = m_radius * cos(stackAngle);
-      float z = m_radius * sin(stackAngle);
+      float zx = m_radius * sin(stackAngle);
 
       for (uint16_t j = 0; j <= m_sectorCount; j++) {
         float sectorAngle = j * sectorStep;
 
-        float x = xy * cos(sectorAngle);
-        float y = xy * sin(sectorAngle);
+        float x = xy * cos(sectorAngle) + m_center.x;
+        float y = xy * sin(sectorAngle) + m_center.y;
+        float z = zx + m_center.z;
 
         tmpVertices.push_back({x, y, z, x * lengthInverse, y * lengthInverse, z * lengthInverse});
       }
@@ -170,8 +171,6 @@ namespace bloom {
       m_vertexData.push_back(m_normals[i + 1]);
       m_vertexData.push_back(m_normals[i + 2]);
     }
-
-    // fmt::print("Vertex data size\n");
   }
 
   void Sphere::addPosition(float x, float y, float z) {
@@ -190,6 +189,21 @@ namespace bloom {
     m_indices.emplace_back(a);
     m_indices.emplace_back(b);
     m_indices.emplace_back(c);
+  }
+
+  glm::vec3 Sphere::getPosition() { return m_center; }
+
+  void Sphere::setPosition(glm::vec3 position) {
+    m_center = position;
+    buildVertices();
+  }
+
+  void Sphere::shiftVertex() {
+    for (std::size_t i = 0; i < m_positions.size(); i += 3) {
+      m_positions[i] += m_center.x;
+      m_positions[i + 1] += m_center.y;
+      m_positions[i + 2] += m_center.z;
+    }
   }
 
   void Sphere::draw() {

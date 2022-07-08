@@ -7,12 +7,12 @@ add_includedirs("include")
 add_requires(table.unpack(libs))
 add_requireconfs(
 	"imguizmo.imgui",
-	{ override = true, version = "v1.87-docking", configs = { glfw_opengl3 = true, useglad = true } }
+	{ override = true, version = "v1.83-docking", configs = { glfw_opengl3 = true, useglad = true } }
 )
 
 add_requires(
 	"imgui",
-	{ alias = "imgui-docking", version = "v1.87-docking", configs = { glfw_opengl3 = true, useglad = true } }
+	{ alias = "imgui-docking", version = "v1.83-docking", configs = { glfw_opengl3 = true, useglad = true } }
 )
 
 table.insert(libs, "imgui-docking")

@@ -1,9 +1,10 @@
 #include <imgui.h>
 
 #include <bloomCG/core/core.hpp>
+#include <bloomCG/core/renderer.hpp>
 #include <bloomCG/scenes/light.hpp>
-#include <cmath>
-#include <memory>
+
+#include "ImGuizmo.h"
 
 namespace bloom {
   namespace scene {
@@ -16,7 +17,7 @@ namespace bloom {
       GLCall(glad_glEnable(GL_DEPTH_TEST));
 
       // ================ Setting up Camera ================
-      glm::vec3 position = glm::vec3(2.5f, 3.0f, 7.0f);
+      glm::vec3 position = glm::vec3(0.5f, 3.0f, 7.0f);
 
       m_camera = std::make_unique<bloom::Camera>(position);
 
@@ -34,7 +35,7 @@ namespace bloom {
           ->toggleMovement()
           ->toggleMouseMovement()
           ->setCameraSpeed(2.5f)
-          ->setCameraSensitivity(.3);
+          ->setCameraSensitivity(.1);
       // ======================================================
 
       glm::vec3 objectKa = glm::vec3{1.0, 0.0, .0};
@@ -60,8 +61,9 @@ namespace bloom {
 
       // m_cubes[0]->print();
 
+      // TODO: Change this to get CORRECTLY
       m_objectShader = std::make_unique<bloom::Shader>(
-          "/home/danielboll/dev/learning/cpp/bloomCG-xmake/assets/shaders/cube.shader.glsl");
+          "/home/danielboll/dev/Unioeste/2022/CG/bloomCG-xmake/assets/shaders/cube.shader.glsl");
       m_objectShader->bind();
       m_objectShader->setUniform3f("uMaterial.ambient", objectKa);
       m_objectShader->setUniform3f("uMaterial.diffuse", objectKd);
@@ -88,7 +90,7 @@ namespace bloom {
             std::make_unique<bloom::Light>(.3f, lightPositions[i], CubeType::REPEATED));
 
       m_lightShader = std::make_unique<bloom::Shader>(
-          "/home/danielboll/dev/learning/cpp/bloomCG-xmake/assets/shaders/light.shader.glsl");
+          "/home/danielboll/dev/Unioeste/2022/CG/bloomCG-xmake/assets/shaders/light.shader.glsl");
       m_lightShader->bind();
       m_lightShader->setUniform4f("uColor", lightColor);
       m_lightShader->unbind();
@@ -192,8 +194,32 @@ namespace bloom {
     }
 
     void Light::onImGuiRender() {
-      ImGui::ShowDemoWindow();
+      // =========================== Imguizmo ===============================
 
+      ImGuizmo::SetOrthographic(false);
+      ImGuizmo::SetDrawlist(bloom::Renderer::getViewportDrawList());
+
+      float windowPosX = bloom::Renderer::getViewportX();
+      float windowPosY = bloom::Renderer::getViewportY();
+
+      float windowWidth = bloom::Renderer::getViewportWidth();
+      float windowHeight = bloom::Renderer::getViewportHeight();
+
+      ImGuizmo::SetRect(windowPosX, windowPosY, windowWidth, windowHeight);
+
+      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::translate(model, m_spheres[0].get()->getPosition());
+
+      ImGuizmo::Manipulate(glm::value_ptr(m_camera->getViewMatrix()),
+                           glm::value_ptr(m_camera->getProjectionMatrix()),
+                           ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::WORLD, glm::value_ptr(model));
+
+      if (ImGuizmo::IsUsing()) {
+        glm::vec3 position = glm::vec3(model[3]);
+        m_spheres[0].get()->setPosition(position);
+      }
+
+      // ====================================================================
       if (ImGui::CollapsingHeader("Object configurations")) {
         ImGui::Checkbox("Wireframe", &m_wireframe);
       }
