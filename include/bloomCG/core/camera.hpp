@@ -4,7 +4,7 @@
 
 namespace bloom {
 
-  enum class CameraType { PERSPECTIVE, ORTHOGRAPHIC };
+  enum class CameraType { PERSPECTIVE, AXONOMETRIC };
 
   class Camera {
   private:
@@ -51,5 +51,7 @@ namespace bloom {
     glm::vec3 getUp() const;
     double getYaw() const;
     double getPitch() const;
+
+    CameraType getCameraType() const;
   };
 }  // namespace bloom

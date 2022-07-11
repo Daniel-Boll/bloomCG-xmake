@@ -71,15 +71,14 @@ namespace bloom {
     m_cameraType = cameraType;
 
     switch (cameraType) {
-      case CameraType::ORTHOGRAPHIC: {
-        const double left = args[0];
-        const double right = args[1];
-        const double bottom = args[2];
-        const double top = args[3];
-        const double near = args[4];
-        const double far = args[5];
+      case CameraType::AXONOMETRIC: {
+        // Project matrix will be identity, so we can just use the camera position and direction
+        // to calculate the view matrix.
+        m_projectionMatrix = glm::mat4(1.0f);
 
-        m_projectionMatrix = glm::ortho(left, right, bottom, top, near, far);
+        // Change 2,2 to 0
+        m_projectionMatrix[2][2] = 0.0f;
+
         break;
       }
 
@@ -90,7 +89,6 @@ namespace bloom {
         const double farPlane = args[3];
 
         m_projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
-        break;
       }
     }
 
@@ -130,4 +128,5 @@ namespace bloom {
   double Camera::getYaw() const { return m_yaw; }
   double Camera::getPitch() const { return m_pitch; }
 
+  CameraType Camera::getCameraType() const { return m_cameraType; }
 }  // namespace bloom

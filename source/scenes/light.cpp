@@ -1,23 +1,73 @@
+#include <fmt/core.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include <bloomCG/core/core.hpp>
 #include <bloomCG/core/renderer.hpp>
 #include <bloomCG/scenes/light.hpp>
+#include <cstddef>
 
 #include "ImGuizmo.h"
+#include "bloomCG/core/camera.hpp"
+
+// Helper to display a little (?) mark which shows a tooltip when hovered.
+// In your own code you may want to display an actual icon if you are using a merged icon fonts (see
+// docs/FONTS.md)
+static void HelpMarker(const char* desc) {
+  ImGui::TextDisabled("(?)");
+  if (ImGui::IsItemHovered()) {
+    ImGui::BeginTooltip();
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+    ImGui::TextUnformatted(desc);
+    ImGui::PopTextWrapPos();
+    ImGui::EndTooltip();
+  }
+}
 
 namespace bloom {
   namespace scene {
+    enum class ObjectType {
+      CUBE,
+      SPHERE,
+      LIGHT,
+    };
+    struct Objects {
+      ObjectType type;
+      std::string name;
+      int32_t index;
+    };
+
+    float m_lastTime;
+    int m_direction;
+
+    bool m_wireframe = false;
+    bool m_depthBuffer = true;
+
+    // MODAL
+    std::size_t bufferSize = sizeof(char) * 30;
+    // Sphere=========
+    bool m_modalSphere = false;
+    bool m_editing = false;
+    char* namePtr;
+    glm::vec3 resultPosition;
+    float resultRadius;
+    // ===============
+
+    // Hierarchy
+    std::vector<Objects> hierarchyObjects;
+    int8_t selected = -1;
+
+    // TODO: Refactor all objects to be contained within hierarchyObjects.
+
     Light::Light() : m_translation(0.0f, 0.0f, 0.0f) {
       m_lastTime = 0;
       m_direction = 1;
 
       GLCall(glad_glEnable(GL_BLEND));
       GLCall(glad_glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-      GLCall(glad_glEnable(GL_DEPTH_TEST));
 
       // ================ Setting up Camera ================
-      glm::vec3 position = glm::vec3(0.5f, 3.0f, 7.0f);
+      glm::vec3 position = glm::vec3(0.5f, 3.0f, 17.0f);
 
       m_camera = std::make_unique<bloom::Camera>(position);
 
@@ -56,7 +106,7 @@ namespace bloom {
         m_cubes.push_back(std::make_unique<bloom::Cube>(2.f, cubePositions[i], CubeType::REPEATED));
 
       m_spheres.push_back(
-          std::make_unique<bloom::Sphere>(glm::vec3{0, 0, 0}, 2., m_sectorCount, m_stackCount));
+          std::make_unique<bloom::Sphere>(glm::vec3{0, 0, 0}, .5, m_sectorCount, m_stackCount));
       // m_spheres.push_back(std::make_unique<bloom::Sphere>(glm::vec3{0, 0, 0}, 1., 7, 8));
 
       // m_cubes[0]->print();
@@ -109,6 +159,7 @@ namespace bloom {
     void Light::onRender(const float deltaTime) {
       GLCall(glad_glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
       GLCall(glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+      GLCall(m_depthBuffer ? glad_glEnable(GL_DEPTH_TEST) : glad_glDisable(GL_DEPTH_TEST));
 
       m_objectShader->bind();
       m_objectShader->setUniformMat4f("uView", m_camera->getViewMatrix());
@@ -193,9 +244,143 @@ namespace bloom {
       m_lightShader->unbind();
     }
 
-    void Light::onImGuiRender() {
-      // =========================== Imguizmo ===============================
+    void Light::inspector() {
+      ImGui::Begin("Inspector");
 
+      if (selected == -1) {
+        ImGui::Text("Nothing is selected");
+        ImGui::End();
+        return;
+      }
+
+      // Display a input to change the name of the current selected element
+      ImGui::Text("%s", hierarchyObjects.at(selected).name.c_str());
+
+      ImGui::End();
+    }
+
+    void Light::hierarchy() {
+      ImGui::Begin("Hierarchy");
+
+      if (ImGui::BeginPopupContextWindow()) {
+        if (ImGui::BeginMenu("Create element")) {
+          if (ImGui::MenuItem("Sphere")) {
+            m_modalSphere = true;
+          }
+          if (ImGui::MenuItem("Cube")) {
+            hierarchyObjects.emplace_back(
+                Objects{ObjectType::CUBE, "Cube", (int32_t)m_cubes.size()});
+          }
+          if (ImGui::MenuItem("Light")) {
+            hierarchyObjects.emplace_back(
+                Objects{ObjectType::LIGHT, "Light", (int32_t)m_lights.size()});
+          }
+
+          ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Scene controllers")) {
+          // Checkbox for wireframe
+          ImGui::Checkbox("Wireframe", &m_wireframe);
+          ImGui::Checkbox("Depth buffer", &m_depthBuffer);
+          ImGui::EndMenu();
+        }
+
+        if (ImGui::MenuItem("Load .element", "CTRL+L", false, false)) {
+        }
+
+        if (ImGui::MenuItem("Save .element", "CTRL+S", false, false)) {
+        }
+
+        ImGui::EndPopup();
+      }
+
+      if (m_modalSphere == true) ImGui::OpenPopup("add_sphere");
+
+      // Always center this window when appearing
+      ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+      ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+      if (ImGui::BeginPopupModal("add_sphere", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        addSphere();
+        m_modalSphere = false;
+      }
+
+      ImGui::Text("Hierarchy");
+      ImGui::SameLine();
+      HelpMarker(
+          "\"Hierarchy\" is a list of all the objects in the scene. Press Right click to add a new "
+          "object\n");
+      ImGui::Separator();
+
+      {
+        for (int32_t i = 0; i < hierarchyObjects.size(); i++) {
+          const auto object = hierarchyObjects[i];
+          // Get the index of the object in the std::vector
+
+          if (ImGui::Selectable(object.name.c_str(), selected == i)) {
+            selected = i;
+          }
+          if (ImGui::BeginPopupContextItem()) {
+            if (ImGui::MenuItem("Delete")) {
+              m_spheres.erase(m_spheres.begin() + hierarchyObjects[i].index);
+              hierarchyObjects.erase(hierarchyObjects.begin() + i);
+            }
+            ImGui::EndPopup();
+          }
+        }
+      }
+
+      ImGui::End();
+    }
+
+    void Light::addSphere(std::string* name, glm::vec3* position, float* radius) {
+      const std::string repeated = fmt::format("({})", m_spheres.size());
+      const std::string sphereName = fmt::format("Sphere{}", m_spheres.size() > 1 ? repeated : "");
+
+      if (!m_editing) {
+        std::string resultName = name ? *name : sphereName;
+        // std::string to char*
+        namePtr = new char[resultName.size() + 1];
+        std::copy(resultName.begin(), resultName.end(), namePtr);
+        // Create buffer
+        resultPosition = position ? *position : glm::vec3(0.0f);
+        resultRadius = radius ? *radius : 1.0f;
+        m_editing = true;
+      }
+
+      ImGui::InputText("Name", namePtr, 64);
+      ImGui::Separator();
+
+      ImGui::InputFloat3("Position", &resultPosition[0]);
+      ImGui::Separator();
+
+      ImGui::InputFloat("Radius", &resultRadius);
+      ImGui::Spacing();
+
+      if (ImGui::Button("OK", ImVec2(120, 0))) {
+        ImGui::CloseCurrentPopup();
+        m_editing = false;
+
+        hierarchyObjects.emplace_back(
+            Objects{ObjectType::SPHERE, namePtr, (int32_t)m_spheres.size()});
+        m_spheres.emplace_back(
+            std::make_unique<bloom::Sphere>(resultPosition, resultRadius, 30, 30));
+      }
+      ImGui::SetItemDefaultFocus();
+      ImGui::SameLine();
+      if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        ImGui::CloseCurrentPopup();
+      }
+      ImGui::EndPopup();
+
+      m_modalSphere = false;
+    }
+
+    void Light::enableGuizmo() {
+      // TODO: add for every object. (only show to the selected one)
+      // TODO: add rotation on R
+      // TODO: add base ImGuizmo for coordinates
       ImGuizmo::SetOrthographic(false);
       ImGuizmo::SetDrawlist(bloom::Renderer::getViewportDrawList());
 
@@ -218,11 +403,17 @@ namespace bloom {
         glm::vec3 position = glm::vec3(model[3]);
         m_spheres[0].get()->setPosition(position);
       }
+    }
 
-      // ====================================================================
+    void Light::onImGuiRender() {
+      hierarchy();
+      inspector();
+      enableGuizmo();
+
       if (ImGui::CollapsingHeader("Object configurations")) {
         ImGui::Checkbox("Wireframe", &m_wireframe);
       }
+
       if (ImGui::CollapsingHeader("Light configuration")) {
         ImGui::SliderFloat3("Light position", &m_translation.x, -5.0f, 5.0f);
 
@@ -230,14 +421,51 @@ namespace bloom {
         ImGui::ColorEdit3("Light diffuse", &m_lightDiffuse.x);
         ImGui::ColorEdit3("Light specular", &m_lightSpecular.x);
       }
+
       if (ImGui::CollapsingHeader("Sphere configuration")) {
         ImGui::InputInt("Sphere sector  count", &m_sectorCount);
         ImGui::InputInt("Sphere stack count", &m_stackCount);
       }
 
+      if (ImGui::CollapsingHeader("Camera configuration")) {
+        switch (m_camera->getCameraType()) {
+          case bloom::CameraType::PERSPECTIVE: {
+            if (ImGui::Button("Change to parallel")) {
+              m_camera->changeCameraType(CameraType::AXONOMETRIC, new double[]{});
+            }
+            break;
+          }
+          case bloom::CameraType::AXONOMETRIC: {
+            if (ImGui::Button("Change to perspective")) {
+              int width = 1920 / 2, height = 1080 / 2;
+
+              const double fov = 45.0f;
+              const double aspect = (float)width / (float)height;
+              const double near = 0.1f;
+              const double far = 100.0f;
+
+              m_camera->changeCameraType(CameraType::PERSPECTIVE,
+                                         new double[]{fov, aspect, near, far});
+            }
+            break;
+          }
+        }
+      }
+
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    }
 
+      // ImGui::ShowDemoWindow();
+
+      if (ImGui::TreeNode("Selection State: Single Selection")) {
+        static int selected = -1;
+        for (int n = 0; n < 5; n++) {
+          char buf[32];
+          sprintf(buf, "Object %d", n);
+          if (ImGui::Selectable(buf, selected == n)) selected = n;
+        }
+        ImGui::TreePop();
+      }
+    }
   }  // namespace scene
 }  // namespace bloom

@@ -12,7 +12,7 @@
 #include "GLFW/glfw3.h"
 #include "ImGuizmo.h"
 
-const int ratio = 2;
+const double ratio = 1.3;
 const GLuint WIDTH = 1920 / ratio, HEIGHT = 1080 / ratio;
 
 // Forward declaration

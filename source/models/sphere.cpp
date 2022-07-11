@@ -28,12 +28,10 @@ namespace bloom {
     m_vertexBuffer = std::make_unique<bloom::VertexBuffer>(m_vertexData.data(),
                                                            m_vertexData.size() * sizeof(float));
 
-    if (m_layoutBuffer == nullptr) {
-      m_layoutBuffer = new bloom::VertexBufferLayout();
-      m_layoutBuffer
-          ->push<float>(3)  // Three floats (coordinates)        x, y, z
-          .push<float>(3);  // Three floats (normals)            nx, ny, nz
-    }
+    m_layoutBuffer = new bloom::VertexBufferLayout();
+    m_layoutBuffer
+        ->push<float>(3)  // Three floats (coordinates)        x, y, z
+        .push<float>(3);  // Three floats (normals)            nx, ny, nz
 
     m_indexBuffer = new bloom::IndexBuffer(m_indices.data(), m_indices.size());
 
@@ -220,6 +218,6 @@ namespace bloom {
     m_vertexArray->unbind();
   }
 
-  IndexBuffer* Sphere::m_indexBuffer = nullptr;
-  VertexBufferLayout* Sphere::m_layoutBuffer = nullptr;
+  // IndexBuffer* Sphere::m_indexBuffer = nullptr;
+  // VertexBufferLayout* Sphere::m_layoutBuffer = nullptr;
 }  // namespace bloom

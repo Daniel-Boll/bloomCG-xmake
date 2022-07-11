@@ -10,8 +10,8 @@
 namespace bloom {
   class Sphere {
   protected:
-    static bloom::IndexBuffer* m_indexBuffer;
-    static bloom::VertexBufferLayout* m_layoutBuffer;
+    bloom::IndexBuffer* m_indexBuffer;
+    bloom::VertexBufferLayout* m_layoutBuffer;
 
   private:
     std::unique_ptr<bloom::VertexArray> m_vertexArray;

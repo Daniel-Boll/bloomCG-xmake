@@ -41,16 +41,18 @@ namespace bloom {
       int32_t m_sectorCount = 30;
       int32_t m_stackCount = 30;
 
-      float m_lastTime;
-      int m_direction;
-      bool m_wireframe = false;
-
     public:
       Light();
 
       void onUpdate(const float deltaTime) override;
       void onRender(const float deltaTime) override;
       void onImGuiRender() override;
+
+      void inspector();
+      void hierarchy();
+      void addSphere(std::string *name = nullptr, glm::vec3 *position = nullptr,
+                     float *radius = nullptr);
+      void enableGuizmo();
     };
   }  // namespace scene
 }  // namespace bloom
