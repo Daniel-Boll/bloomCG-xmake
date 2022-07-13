@@ -50,9 +50,12 @@ uniform vec3 uLightPosition;
 uniform vec3 uCameraPosition;
 uniform Material uMaterial;
 uniform Light uLight;
+uniform bool uUseLighting;
 
 // TODO: Reintroduce textures later
 void main() { 
+  // Check if uLightPosition was set
+  if (uUseLighting) {
   // ==== Ambient Light ====
   vec3 ambient = uLight.ambient * uMaterial.ambient;
 
@@ -78,6 +81,9 @@ void main() {
   diffuse *= attenuation;
   specular *= attenuation;
 
-  vec3 result = (ambient + diffuse + specular);
-  color = vec4(result, 1.0);
+    vec3 result = (ambient + diffuse + specular);
+    color = vec4(result, 1.0);
+  } else {
+    color = vec4(uMaterial.ambient, 1.0);
+  }
 }

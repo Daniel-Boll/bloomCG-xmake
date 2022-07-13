@@ -1,14 +1,14 @@
+#include <bloomCG/buffers/vertex_buffer_layout.hpp>
+#include <bloomCG/core/common.hpp>
+#include <bloomCG/core/core.hpp>
 #include <bloomCG/models/sphere.hpp>
-#include <cmath>
-#include <memory>
-
-#include "bloomCG/buffers/vertex_buffer_layout.hpp"
-#include "bloomCG/core/core.hpp"
-#include "fmt/core.h"
 
 namespace bloom {
-  Sphere::Sphere(glm::vec3 center, float radius, uint16_t sectorCount, uint16_t stackCount)
-      : m_center(center), m_radius(radius) {
+  Sphere::Sphere(glm::vec3 center, glm::vec3 color, float radius, uint16_t sectorCount,
+                 uint16_t stackCount)
+      : m_center(center), m_radius(radius), m_objectKa(color), m_objectKd(color) {
+    m_objectKs = glm::vec3{.5, .5, .5};
+    m_objectShininess = 32;
     set(m_radius, sectorCount, stackCount);
   }
 
@@ -50,6 +50,21 @@ namespace bloom {
   void Sphere::setStackCount(uint16_t stackCount) {
     if (stackCount != m_stackCount) set(m_radius, m_sectorCount, stackCount);
   }
+
+  void Sphere::setColor(glm::vec3 color) {
+    m_objectKd = color;
+    m_objectKa = color;
+  }
+  void Sphere::setKa(glm::vec3 ka) { m_objectKa = ka; }
+  void Sphere::setKd(glm::vec3 kd) { m_objectKd = kd; }
+  void Sphere::setKs(glm::vec3 ks) { m_objectKs = ks; }
+  void Sphere::setShininess(float shininess) { m_objectShininess = shininess; }
+
+  glm::vec3 Sphere::getColor() { return m_objectKd; }
+  glm::vec3 Sphere::getKa() { return m_objectKa; }
+  glm::vec3 Sphere::getKd() { return m_objectKd; }
+  glm::vec3 Sphere::getKs() { return m_objectKs; }
+  float Sphere::getShininess() { return m_objectShininess; }
 
   void Sphere::print() {
     fmt::print("==== Sphere ====\n");

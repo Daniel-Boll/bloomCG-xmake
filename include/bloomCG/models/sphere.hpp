@@ -32,9 +32,12 @@ namespace bloom {
     std::vector<uint32_t> m_indices;
 
     std::vector<float> m_vertexData;  // Combination of (position, normal)
+    glm::vec3 m_objectKa, m_objectKd, m_objectKs;
+    float m_objectShininess;
 
   public:
-    Sphere(glm::vec3 center, float radius = 0.2, uint16_t sectorCount = 30, uint16_t stackCount = 30);
+    Sphere(glm::vec3 center, glm::vec3 color = glm::vec3{1., .0, .0}, float radius = 0.2,
+           uint16_t sectorCount = 30, uint16_t stackCount = 30);
     ~Sphere() {}
 
     // Getters
@@ -47,9 +50,20 @@ namespace bloom {
     void setRadius(float radius);
     void setSectorCount(uint16_t sectorCount);
     void setStackCount(uint16_t stackCount);
+    void setColor(glm::vec3 color);
+    void setKa(glm::vec3 ka);
+    void setKd(glm::vec3 kd);
+    void setKs(glm::vec3 ks);
+    void setShininess(float shininess);
 
     glm::vec3 getPosition();
     void setPosition(glm::vec3 position);
+
+    glm::vec3 getColor();
+    glm::vec3 getKa();
+    glm::vec3 getKd();
+    glm::vec3 getKs();
+    float getShininess();
 
     // Functionalities
     void draw();
