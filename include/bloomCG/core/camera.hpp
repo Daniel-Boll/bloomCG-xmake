@@ -1,12 +1,13 @@
 #pragma once
 
 #include <bloomCG/core/common.hpp>
+#include <bloomCG/models/model.hpp>
 
 namespace bloom {
 
   enum class CameraType { PERSPECTIVE, AXONOMETRIC };
 
-  class Camera {
+  class Camera : public Model {
   private:
     glm::vec3 m_cameraPosition, m_cameraFront, m_cameraUp;
     glm::vec3 m_direction;
@@ -46,7 +47,7 @@ namespace bloom {
     void setYaw(double yaw);
     void setPitch(double pitch);
 
-    glm::vec3 getPosition() const;
+    glm::vec3 getPosition();
     glm::vec3 getFront() const;
     glm::vec3 getUp() const;
     double getYaw() const;

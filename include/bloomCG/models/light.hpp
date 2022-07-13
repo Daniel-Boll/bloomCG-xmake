@@ -1,12 +1,12 @@
 #pragma once
 
-#include <bloomCG/models/cube.hpp>
+#include <bloomCG/models/sphere.hpp>
 
 namespace bloom {
   // Make Light a subclass of Cube completely
-  class Light : public Cube {
+  class Light : public Sphere {
   public:
-    Light(float sideSize, glm::vec3 position, CubeType type = CubeType::INDEXED);
+    Light(glm::vec3 position);
     ~Light();
   };
 }  // namespace bloom

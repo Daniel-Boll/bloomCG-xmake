@@ -121,7 +121,7 @@ namespace bloom {
   void Camera::setYaw(double yaw) { m_yaw = yaw; }
   void Camera::setPitch(double pitch) { m_pitch = pitch; }
 
-  glm::vec3 Camera::getPosition() const { return m_cameraPosition; }
+  glm::vec3 Camera::getPosition() { return m_cameraPosition; }
   glm::vec3 Camera::getFront() const { return m_cameraFront; }
   glm::vec3 Camera::getUp() const { return m_cameraUp; }
 

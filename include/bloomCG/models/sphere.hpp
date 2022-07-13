@@ -6,9 +6,10 @@
 #include <bloomCG/core/common.hpp>
 #include <bloomCG/core/core.hpp>
 #include <bloomCG/core/shader.hpp>
+#include <bloomCG/models/model.hpp>
 
 namespace bloom {
-  class Sphere {
+  class Sphere : public Model {
   protected:
     bloom::IndexBuffer* m_indexBuffer;
     bloom::VertexBufferLayout* m_layoutBuffer;
@@ -33,7 +34,7 @@ namespace bloom {
     std::vector<float> m_vertexData;  // Combination of (position, normal)
 
   public:
-    Sphere(glm::vec3 center, float radius, uint16_t sectorCount, uint16_t stackCount);
+    Sphere(glm::vec3 center, float radius = 0.2, uint16_t sectorCount = 30, uint16_t stackCount = 30);
     ~Sphere() {}
 
     // Getters

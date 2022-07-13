@@ -1,14 +1,15 @@
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include <bloomCG/core/camera.hpp>
 #include <bloomCG/core/core.hpp>
 #include <bloomCG/core/renderer.hpp>
 #include <bloomCG/scenes/light.hpp>
 #include <cstddef>
 
 #include "ImGuizmo.h"
-#include "bloomCG/core/camera.hpp"
 
 // Helper to display a little (?) mark which shows a tooltip when hovered.
 // In your own code you may want to display an actual icon if you are using a merged icon fonts (see
@@ -24,28 +25,79 @@ static void HelpMarker(const char* desc) {
   }
 }
 
+// Each key represents the type of the constructor of the class
+enum class ObjectType { CUBE, SPHERE, LIGHT, CAMERA };
+struct Objects {
+  ObjectType type;
+  std::string name;
+  int32_t index;
+
+  union Object {
+    bloom::Sphere* sphere;
+    bloom::Cube* cube;
+    bloom::Light* light;
+    bloom::Camera* camera;
+  } object;
+
+  bloom::Model* get() {
+    // Check for the current type of the struct, then return the object
+    switch (type) {
+      case ObjectType::CUBE:
+        return object.cube;
+      case ObjectType::SPHERE:
+        return object.sphere;
+      case ObjectType::LIGHT:
+        return object.light;
+      case ObjectType::CAMERA:
+        return object.camera;
+    }
+  }
+};
+
+std::ostream& operator<<(std::ostream& os, const Objects& object) {
+  os << "Object: " << object.name << " (" << object.index << ")";
+  return os;
+}
+
 namespace bloom {
   namespace scene {
-    enum class ObjectType {
-      CUBE,
-      SPHERE,
-      LIGHT,
-    };
-    struct Objects {
-      ObjectType type;
-      std::string name;
-      int32_t index;
-    };
+    // Hierarchy
+    std::vector<Objects> hierarchyObjects;
+    int8_t selected = -1;
 
-    float m_lastTime;
-    int m_direction;
+    // Get reference of the object by type
+    template <ObjectType T> Objects& getObjectByTypeRef(int32_t index) {
+      // Retrieve the index of the object in the hierarchy that matches the type and index
+      std::for_each(hierarchyObjects.begin(), hierarchyObjects.end(), [&index](Objects& object) {
+        if (object.type == T && object.index == index) {
+          index = object.index;
+        }
+      });
+
+      // Return the object
+      return hierarchyObjects[index];
+    }
+
+    // Get all objects of the hierarchy by type, if index is informed, it will get the object at the
+    // index of the vector
+    template <ObjectType T> std::vector<Objects> getObjectByType() {
+      std::vector<Objects> objects;
+      std::copy_if(hierarchyObjects.begin(), hierarchyObjects.end(), std::back_inserter(objects),
+                   [](const Objects& obj) { return obj.type == T; });
+      return objects;
+    }
+
+    template <ObjectType T> Objects getObjectByType(int32_t index) {
+      std::vector<Objects> objects = getObjectByType<T>();
+      return objects[index];
+    }
 
     bool m_wireframe = false;
     bool m_depthBuffer = true;
 
     // MODAL
     std::size_t bufferSize = sizeof(char) * 30;
-    // Sphere=========
+    // ==== Sphere ====
     bool m_modalSphere = false;
     bool m_editing = false;
     char* namePtr;
@@ -53,23 +105,24 @@ namespace bloom {
     float resultRadius;
     // ===============
 
-    // Hierarchy
-    std::vector<Objects> hierarchyObjects;
-    int8_t selected = -1;
+    // ==== Camera ====
+    bloom::Camera* cameraObject;
+    // ================
 
-    // TODO: Refactor all objects to be contained within hierarchyObjects.
+    // ==== Inspector ====
+    bool m_editingInspector = false;
 
     Light::Light() : m_translation(0.0f, 0.0f, 0.0f) {
-      m_lastTime = 0;
-      m_direction = 1;
-
       GLCall(glad_glEnable(GL_BLEND));
       GLCall(glad_glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
       // ================ Setting up Camera ================
       glm::vec3 position = glm::vec3(0.5f, 3.0f, 17.0f);
 
-      m_camera = std::make_unique<bloom::Camera>(position);
+      hierarchyObjects.emplace_back(
+          Objects{ObjectType::CAMERA, "Camera", 0, {.camera = new bloom::Camera(position)}});
+
+      cameraObject = (bloom::Camera*)getObjectByTypeRef<ObjectType::CAMERA>(0).get();
 
       // Get window width
       // int width, height;
@@ -81,7 +134,7 @@ namespace bloom {
       const double near = 0.1f;
       const double far = 100.0f;
 
-      m_camera->changeCameraType(CameraType::PERSPECTIVE, new double[]{fov, aspect, near, far})
+      cameraObject->changeCameraType(CameraType::PERSPECTIVE, new double[]{fov, aspect, near, far})
           ->toggleMovement()
           ->toggleMouseMovement()
           ->setCameraSpeed(2.5f)
@@ -105,8 +158,14 @@ namespace bloom {
       for (int i = 0; i < cubeCount; i++)
         m_cubes.push_back(std::make_unique<bloom::Cube>(2.f, cubePositions[i], CubeType::REPEATED));
 
-      m_spheres.push_back(
-          std::make_unique<bloom::Sphere>(glm::vec3{0, 0, 0}, .5, m_sectorCount, m_stackCount));
+      // ================ Setting up Sphere ================
+      hierarchyObjects.emplace_back(Objects{
+          ObjectType::SPHERE,
+          "Sphere",
+          0,
+          {.sphere = new bloom::Sphere(glm::vec3{0, 0, 0}, .5, m_sectorCount, m_stackCount)}});
+      // m_spheres.push_back(
+      //     std::make_unique<bloom::Sphere>(glm::vec3{0, 0, 0}, .5, m_sectorCount, m_stackCount));
       // m_spheres.push_back(std::make_unique<bloom::Sphere>(glm::vec3{0, 0, 0}, 1., 7, 8));
 
       // m_cubes[0]->print();
@@ -130,14 +189,17 @@ namespace bloom {
       // =================== Lights in the scene ================
       glm::vec3 lightPositions[] = {
           glm::vec3(0.5f, 2.1f, -1.0f),
+          glm::vec3(1.5f, 3.1f, -2.0f),
       };
       m_translation = glm::vec3(0.5f, 2.1f, -1.f);
 
       // Get the vector size
       int lightCount = sizeof(lightPositions) / sizeof(lightPositions[0]);
       for (int i = 0; i < lightCount; i++)
-        m_lights.push_back(
-            std::make_unique<bloom::Light>(.3f, lightPositions[i], CubeType::REPEATED));
+        hierarchyObjects.emplace_back(Objects{ObjectType::LIGHT,
+                                              fmt::format("Light_{}", i),
+                                              i,
+                                              {.light = new bloom::Light(lightPositions[i])}});
 
       m_lightShader = std::make_unique<bloom::Shader>(
           "/home/danielboll/dev/Unioeste/2022/CG/bloomCG-xmake/assets/shaders/light.shader.glsl");
@@ -148,12 +210,12 @@ namespace bloom {
     }
 
     void Light::onUpdate(const float deltaTime) {
-      m_camera->update(deltaTime);
+      cameraObject->update(deltaTime);
 
-      for (auto& light : m_lights) light.get()->setPosition(m_translation);
+      // for (auto& light : m_lights) light.get()->setPosition(m_translation);
 
-      m_spheres[0]->setSectorCount(m_sectorCount);
-      m_spheres[0]->setStackCount(m_stackCount);
+      // m_spheres[0]->setSectorCount(m_sectorCount);
+      // m_spheres[0]->setStackCount(m_stackCount);
     }
 
     void Light::onRender(const float deltaTime) {
@@ -162,9 +224,9 @@ namespace bloom {
       GLCall(m_depthBuffer ? glad_glEnable(GL_DEPTH_TEST) : glad_glDisable(GL_DEPTH_TEST));
 
       m_objectShader->bind();
-      m_objectShader->setUniformMat4f("uView", m_camera->getViewMatrix());
-      m_objectShader->setUniformMat4f("uProjection", m_camera->getProjectionMatrix());
-      m_objectShader->setUniform3f("uCameraPosition", m_camera->getPosition());
+      m_objectShader->setUniformMat4f("uView", cameraObject->getViewMatrix());
+      m_objectShader->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix());
+      m_objectShader->setUniform3f("uCameraPosition", cameraObject->getPosition());
 
       m_objectShader->setUniform3f("uLight.ambient", m_lightAmbient);
       m_objectShader->setUniform3f("uLight.diffuse", m_lightDiffuse);
@@ -184,46 +246,30 @@ namespace bloom {
       //   cube->draw();
       // }
 
-      for (auto& sphere : m_spheres) {
-        glm::vec3 position = glm::vec3{.0, .0, .0};
-        glm::mat4 model = glm::mat4(1.0f);
-        float angle = 20.0f * offset++;
-
-        model = glm::translate(model, position);
-        m_objectShader->setUniformMat4f("uModel", model);
-        m_objectShader->setUniform3f("uLightPosition", m_lights[0].get()->getPosition());
-        sphere->draw();
-      }
+      // for (auto& sphere : m_spheres) {
+      //   glm::vec3 position = glm::vec3{.0, .0, .0};
+      //   glm::mat4 model = glm::mat4(1.0f);
+      //   float angle = 20.0f * offset++;
+      //
+      //   model = glm::translate(model, position);
+      //   m_objectShader->setUniformMat4f("uModel", model);
+      //   // m_objectShader->setUniform3f("uLightPosition", m_lights[0].get()->getPosition());
+      //   m_objectShader->setUniform3f(
+      //       "uLightPosition",
+      //       ((bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get())->getPosition());
+      //   sphere->draw();
+      // }
 
       m_objectShader->unbind();
 
       m_lightShader->bind();
-      m_lightShader->setUniformMat4f("uView", m_camera->getViewMatrix());
-      m_lightShader->setUniformMat4f("uProjection", m_camera->getProjectionMatrix());
+      m_lightShader->setUniformMat4f("uView", cameraObject->getViewMatrix());
+      m_lightShader->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix());
 
       // Move the light in a orbit around the center
-      m_translation.x = sin(glfwGetTime()) * 5.0f;
-      m_translation.z = cos(glfwGetTime()) * 5.0f;
-      m_translation.y = sin(glfwGetTime()) * 5.0f;
-
-      // Do the bellow snippet of code every .1 seconds
-      if (glfwGetTime() > m_lastTime + .1f) {
-        m_lastTime = glfwGetTime();
-        // Up until 50 then reverse the direction
-        if (m_direction == 1) {
-          if (m_sectorCount < 50) {
-            m_sectorCount++;
-          } else {
-            m_direction = -1;
-          }
-        } else {
-          if (m_sectorCount > 1) {
-            m_sectorCount--;
-          } else {
-            m_direction = 1;
-          }
-        }
-      }
+      // m_translation.x = sin(glfwGetTime()) * 5.0f;
+      // m_translation.z = cos(glfwGetTime()) * 5.0f;
+      // m_translation.y = sin(glfwGetTime()) * 5.0f;
 
       if (m_wireframe) {
         GLCall(glad_glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
@@ -231,15 +277,59 @@ namespace bloom {
         GLCall(glad_glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
       }
 
-      for (auto& light : m_lights) {
-        light->setPosition(m_translation);
-        glm::vec3 position = light->getPosition();
-        glm::mat4 model = glm::mat4(1.0f);
+      // Loop through the hierarchyObjects and draw them
+      for (auto& object : hierarchyObjects) {
+        switch (object.type) {
+          case ObjectType::CUBE: {
+          }
+          case ObjectType::SPHERE: {
+            m_objectShader->bind();
+            // glm::vec3 position = glm::vec3{.0, .0, .0};
+            glm::vec3 position = object.get()->getPosition();
+            glm::mat4 model = glm::mat4(1.0f);
+            float angle = 20.0f * offset++;
+            auto light = (bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get();
 
-        model = glm::translate(model, position);
-        m_lightShader->setUniformMat4f("uModel", model);
-        light->draw();
+            model = glm::translate(model, position);
+            m_objectShader->setUniformMat4f("uModel", model);
+            // m_objectShader->setUniform3f("uLightPosition", m_lights[0].get()->getPosition());
+            m_objectShader->setUniform3f("uLightPosition", light->getPosition());
+
+            ((bloom::Sphere*)object.get())->draw();
+            m_objectShader->unbind();
+            break;
+          }
+          case ObjectType::LIGHT: {
+            bloom::Light* light = (bloom::Light*)object.get();
+            m_lightShader->bind();
+            glm::vec3 position = object.get()->getPosition();
+            glm::mat4 model = glm::mat4(1.0f);
+            // reduce 1 of each coordinate of the position
+            position.x -= .5f;
+            position.y -= 2.1f;
+            position.z += 1.0f;
+            // 0.5f, 2.1f, -1.0f
+
+            model = glm::translate(model, position);
+            m_lightShader->setUniformMat4f("uModel", model);
+            light->draw();
+            m_lightShader->unbind();
+            break;
+          }
+          case ObjectType::CAMERA:
+            break;
+        }
       }
+
+      // for (auto& light : m_lights) {
+      //   light->setPosition(m_translation);
+      //   glm::vec3 position = light->getPosition();
+      //   glm::mat4 model = glm::mat4(1.0f);
+      //
+      //   model = glm::translate(model, position);
+      //   m_lightShader->setUniformMat4f("uModel", model);
+      //   light->draw();
+      // }
 
       m_lightShader->unbind();
     }
@@ -253,8 +343,54 @@ namespace bloom {
         return;
       }
 
-      // Display a input to change the name of the current selected element
-      ImGui::Text("%s", hierarchyObjects.at(selected).name.c_str());
+      Objects currentSelected = hierarchyObjects[selected];
+
+      ImGui::TextDisabled("%s", currentSelected.name.c_str());
+
+      switch (currentSelected.type) {
+        case ObjectType::CUBE:
+        case ObjectType::SPHERE: {
+          // Position
+          auto object = (bloom::Sphere*)currentSelected.get();
+          glm::vec3 position = object->getPosition();
+
+          ImGui::Text("Position");
+          ImGui::InputFloat3("Position", glm::value_ptr(position));
+
+          // Apply position change
+          // If the position has changed, we update the object's position
+          if (position != object->getPosition()) {
+            object->setPosition(position);
+          }
+          break;
+        }
+        case ObjectType::LIGHT: {
+          // Position
+          auto object = (bloom::Light*)currentSelected.get();
+          glm::vec3 position = object->getPosition();
+
+          ImGui::Text("Position");
+          ImGui::InputFloat3("Position", glm::value_ptr(position));
+
+          // Apply position change
+          if (position != object->getPosition()) {
+            object->setPosition(position);
+          }
+          break;
+        }
+        case ObjectType::CAMERA: {
+          // Position
+          auto object = (bloom::Camera*)currentSelected.get();
+          glm::vec3 position = object->getPosition();
+
+          ImGui::Text("Position");
+          ImGui::SliderFloat3("Position", glm::value_ptr(position), -100, 100);
+
+          // Apply position change
+          object->setPosition(position);
+          break;
+        }
+      }
 
       ImGui::End();
     }
@@ -272,8 +408,8 @@ namespace bloom {
                 Objects{ObjectType::CUBE, "Cube", (int32_t)m_cubes.size()});
           }
           if (ImGui::MenuItem("Light")) {
-            hierarchyObjects.emplace_back(
-                Objects{ObjectType::LIGHT, "Light", (int32_t)m_lights.size()});
+            // hierarchyObjects.emplace_back(
+            //     Objects{ObjectType::LIGHT, "Light", (int32_t)m_lights.size()});
           }
 
           ImGui::EndMenu();
@@ -309,7 +445,8 @@ namespace bloom {
       ImGui::Text("Hierarchy");
       ImGui::SameLine();
       HelpMarker(
-          "\"Hierarchy\" is a list of all the objects in the scene. Press Right click to add a new "
+          "\"Hierarchy\" is a list of all the objects in the scene. Press Right click to add a "
+          "new "
           "object\n");
       ImGui::Separator();
 
@@ -323,7 +460,6 @@ namespace bloom {
           }
           if (ImGui::BeginPopupContextItem()) {
             if (ImGui::MenuItem("Delete")) {
-              m_spheres.erase(m_spheres.begin() + hierarchyObjects[i].index);
               hierarchyObjects.erase(hierarchyObjects.begin() + i);
             }
             ImGui::EndPopup();
@@ -335,8 +471,9 @@ namespace bloom {
     }
 
     void Light::addSphere(std::string* name, glm::vec3* position, float* radius) {
-      const std::string repeated = fmt::format("({})", m_spheres.size());
-      const std::string sphereName = fmt::format("Sphere{}", m_spheres.size() > 1 ? repeated : "");
+      const auto size = getObjectByType<ObjectType::SPHERE>().size();
+      const std::string repeated = fmt::format("({})", size);
+      const std::string sphereName = fmt::format("Sphere{}", size > 1 ? repeated : "");
 
       if (!m_editing) {
         std::string resultName = name ? *name : sphereName;
@@ -363,9 +500,10 @@ namespace bloom {
         m_editing = false;
 
         hierarchyObjects.emplace_back(
-            Objects{ObjectType::SPHERE, namePtr, (int32_t)m_spheres.size()});
-        m_spheres.emplace_back(
-            std::make_unique<bloom::Sphere>(resultPosition, resultRadius, 30, 30));
+            Objects{ObjectType::SPHERE,
+                    namePtr,
+                    (int32_t)getObjectByType<ObjectType::SPHERE>().size(),
+                    {.sphere = new bloom::Sphere(resultPosition, resultRadius, 30, 30)}});
       }
       ImGui::SetItemDefaultFocus();
       ImGui::SameLine();
@@ -378,9 +516,11 @@ namespace bloom {
     }
 
     void Light::enableGuizmo() {
-      // TODO: add for every object. (only show to the selected one)
-      // TODO: add rotation on R
-      // TODO: add base ImGuizmo for coordinates
+      // // TODO: add for every object. (only show to the selected one)
+      // // TODO: add rotation on R
+      // // TODO: add base ImGuizmo for coordinates
+      if (selected == -1) return;
+
       ImGuizmo::SetOrthographic(false);
       ImGuizmo::SetDrawlist(bloom::Renderer::getViewportDrawList());
 
@@ -393,15 +533,17 @@ namespace bloom {
       ImGuizmo::SetRect(windowPosX, windowPosY, windowWidth, windowHeight);
 
       glm::mat4 model = glm::mat4(1.0f);
-      model = glm::translate(model, m_spheres[0].get()->getPosition());
+      auto* selectedModel = hierarchyObjects[selected].get();
 
-      ImGuizmo::Manipulate(glm::value_ptr(m_camera->getViewMatrix()),
-                           glm::value_ptr(m_camera->getProjectionMatrix()),
-                           ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::WORLD, glm::value_ptr(model));
+      model = glm::translate(model, selectedModel->getPosition());
+
+      ImGuizmo::Manipulate(glm::value_ptr(cameraObject->getViewMatrix()),
+                           glm::value_ptr(cameraObject->getProjectionMatrix()),
+                           ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::LOCAL, glm::value_ptr(model));
 
       if (ImGuizmo::IsUsing()) {
         glm::vec3 position = glm::vec3(model[3]);
-        m_spheres[0].get()->setPosition(position);
+        selectedModel->setPosition(position);
       }
     }
 
@@ -428,10 +570,10 @@ namespace bloom {
       }
 
       if (ImGui::CollapsingHeader("Camera configuration")) {
-        switch (m_camera->getCameraType()) {
+        switch (cameraObject->getCameraType()) {
           case bloom::CameraType::PERSPECTIVE: {
             if (ImGui::Button("Change to parallel")) {
-              m_camera->changeCameraType(CameraType::AXONOMETRIC, new double[]{});
+              cameraObject->changeCameraType(CameraType::AXONOMETRIC, new double[]{});
             }
             break;
           }
@@ -444,8 +586,8 @@ namespace bloom {
               const double near = 0.1f;
               const double far = 100.0f;
 
-              m_camera->changeCameraType(CameraType::PERSPECTIVE,
-                                         new double[]{fov, aspect, near, far});
+              cameraObject->changeCameraType(CameraType::PERSPECTIVE,
+                                             new double[]{fov, aspect, near, far});
             }
             break;
           }
@@ -455,7 +597,7 @@ namespace bloom {
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-      // ImGui::ShowDemoWindow();
+      ImGui::ShowDemoWindow();
 
       if (ImGui::TreeNode("Selection State: Single Selection")) {
         static int selected = -1;

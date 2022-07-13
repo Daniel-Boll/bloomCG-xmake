@@ -1,12 +1,12 @@
 #pragma once
 
 #include <bloomCG/buffers/index_buffer.hpp>
+#include <bloomCG/buffers/vertex_array.hpp>
 #include <bloomCG/buffers/vertex_buffer.hpp>
+#include <bloomCG/buffers/vertex_buffer_layout.hpp>
 #include <bloomCG/core/core.hpp>
+#include <bloomCG/models/model.hpp>
 #include <bloomCG/core/shader.hpp>
-
-#include "bloomCG/buffers/vertex_array.hpp"
-#include "bloomCG/buffers/vertex_buffer_layout.hpp"
 
 namespace bloom {
 
@@ -17,7 +17,7 @@ namespace bloom {
               // but has normals values correct
   };
 
-  class Cube {
+  class Cube : public Model {
   protected:
     static bloom::IndexBuffer *m_indexBuffer;
     static bloom::VertexBufferLayout *m_vertexBufferIndexedLayout;
