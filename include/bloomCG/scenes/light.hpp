@@ -52,6 +52,8 @@ namespace bloom {
       void hierarchy();
       void addSphere(std::string *name = nullptr, glm::vec3 *position = nullptr,
                      float *radius = nullptr);
+      void addCube(std::string *name = nullptr, glm::vec3 *position = nullptr,
+                   float *side = nullptr);
       void enableGuizmo();
     };
   }  // namespace scene

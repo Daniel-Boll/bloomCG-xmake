@@ -1,13 +1,13 @@
 #include <bloomCG/buffers/index_buffer.hpp>
+#include <bloomCG/core/core.hpp>
 #include <bloomCG/models/cube.hpp>
 
-#include "bloomCG/core/core.hpp"
-
 namespace bloom {
-  // TODO: Re-implement the cube class in order to not use the index buffer, because it is not
-  // possible to calculate normals for the cube accordingly.
-  Cube::Cube(float sideSize, glm::vec3 position, CubeType type)
-      : m_size(sideSize), m_position(position), m_type(type) {
+  Cube::Cube(glm::vec3 position, float side, glm::vec3 color, CubeType type)
+      : m_size(side), m_position(position), m_type(type), m_objectKa(color), m_objectKd(color) {
+    m_objectKs = glm::vec3{.5, .5, .5};
+    m_objectShininess = 32;
+
     if (m_type == CubeType::INDEXED)
       generateIndexedVertices();
     else
@@ -239,6 +239,31 @@ namespace bloom {
     m_vertexArray->unbind();
     m_vertexBuffer->unbind();
   }
+
+  void Cube::setSide(float side) {
+    m_size = side;
+    if (m_type == CubeType::INDEXED)
+      generateIndexedVertices();
+    else
+      generateRepeatedVertices();
+
+    setupBuffers();
+  }
+  void Cube::setColor(glm::vec3 color) {
+    m_objectKa = color;
+    m_objectKd = color;
+  }
+  void Cube::setKa(glm::vec3 ka) { m_objectKa = ka; }
+  void Cube::setKd(glm::vec3 kd) { m_objectKd = kd; }
+  void Cube::setKs(glm::vec3 ks) { m_objectKs = ks; }
+  void Cube::setShininess(float shininess) { m_objectShininess = shininess; }
+
+  float Cube::getSide() { return m_size; }
+  glm::vec3 Cube::getColor() { return m_objectKa; }
+  glm::vec3 Cube::getKa() { return m_objectKa; }
+  glm::vec3 Cube::getKd() { return m_objectKd; }
+  glm::vec3 Cube::getKs() { return m_objectKs; }
+  float Cube::getShininess() { return m_objectShininess; }
 
   IndexBuffer* Cube::m_indexBuffer = nullptr;
   VertexBufferLayout* Cube::m_vertexBufferIndexedLayout = nullptr;

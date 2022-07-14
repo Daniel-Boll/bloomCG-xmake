@@ -5,8 +5,8 @@
 #include <bloomCG/buffers/vertex_buffer.hpp>
 #include <bloomCG/buffers/vertex_buffer_layout.hpp>
 #include <bloomCG/core/core.hpp>
-#include <bloomCG/models/model.hpp>
 #include <bloomCG/core/shader.hpp>
+#include <bloomCG/models/model.hpp>
 
 namespace bloom {
 
@@ -37,6 +37,9 @@ namespace bloom {
     bloom::VertexArray *m_vertexArray;
     std::unique_ptr<bloom::VertexBuffer> m_vertexBuffer;
 
+    glm::vec3 m_objectKa, m_objectKd, m_objectKs;
+    float m_objectShininess;
+
     void generateIndexedVertices();
     void generateRepeatedVertices();
     void generateNormals();
@@ -48,13 +51,28 @@ namespace bloom {
     uint32_t *getIndices();
 
   public:
-    Cube(float sideSize, glm::vec3 position, CubeType type = CubeType::INDEXED);
+    Cube(glm::vec3 position, float side = 2.f, glm::vec3 color = glm::vec3{.0, 1., 1.},
+         CubeType type = CubeType::REPEATED);
 
     void draw();
     void print();
 
     glm::vec3 getPosition();
     void setPosition(glm::vec3 position);
+
+    void setSide(float side);
+    void setColor(glm::vec3 color);
+    void setKa(glm::vec3 ka);
+    void setKd(glm::vec3 kd);
+    void setKs(glm::vec3 ks);
+    void setShininess(float shininess);
+
+    float getSide();
+    glm::vec3 getColor();
+    glm::vec3 getKa();
+    glm::vec3 getKd();
+    glm::vec3 getKs();
+    float getShininess();
 
     ~Cube();
   };

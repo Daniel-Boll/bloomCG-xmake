@@ -112,16 +112,24 @@ namespace bloom {
     bool m_depthBuffer = true;
 
     // +++++++++++++++++++ MODAL +++++++++++++++++++++++++
-    /**/ std::size_t bufferSize = sizeof(char) * 30;
-    /*                  SPHERE                          */
-    /**/ bool m_modalSphere = false;
-    /**/ bool m_editing = false;
-    /**/ char* namePtr;
-    /**/ glm::vec3 resultPosition;
-    /**/ glm::vec3 resultColor;
-    /**/ float resultRadius;
     /*                                                  */
-    /*                   CUBE                           */
+    /**/ std::size_t bufferSize = sizeof(char) * 30;
+    /*                                                  */
+    /*                     SPHERE                       */
+    /**/ bool m_modalSphere = false;
+    /**/ bool m_editingSphere = false;
+    /**/ char* namePtrSphere;
+    /**/ glm::vec3 resultPositionSphere;
+    /**/ glm::vec3 resultColorSphere;
+    /**/ float resultRadiusSphere;
+    /*                                                  */
+    /*                      CUBE                        */
+    /**/ bool m_modalCube = false;
+    /**/ bool m_editingCube = false;
+    /**/ char* namePtrCube;
+    /**/ glm::vec3 resultPositionCube;
+    /**/ glm::vec3 resultColorCube;
+    /**/ float resultSideCube;
     /*                                                  */
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -169,9 +177,10 @@ namespace bloom {
       };
 
       // For each cube position create a cube object
-      int cubeCount = sizeof(cubePositions) / sizeof(cubePositions[0]);
-      for (int i = 0; i < cubeCount; i++)
-        m_cubes.push_back(std::make_unique<bloom::Cube>(2.f, cubePositions[i], CubeType::REPEATED));
+      // int cubeCount = sizeof(cubePositions) / sizeof(cubePositions[0]);
+      // for (int i = 0; i < cubeCount; i++)
+      //   m_cubes.push_back(std::make_unique<bloom::Cube>(2.f, cubePositions[i],
+      //   CubeType::REPEATED));
 
       // ================ Setting up Sphere ================
       hierarchyObjects.emplace_back(
@@ -243,7 +252,6 @@ namespace bloom {
       m_objectShader->setUniform3f("uLight.diffuse", m_lightDiffuse);
       m_objectShader->setUniform3f("uLight.specular", m_lightSpecular);
 
-      // Print light specular
       uint32_t offset = 0;
       // for (auto& cube : m_cubes) {
       //   glm::vec3 position = cube->getPosition();
@@ -255,20 +263,6 @@ namespace bloom {
       //   m_objectShader->setUniformMat4f("uModel", model);
       //   m_objectShader->setUniform3f("uLightPosition", m_lights[0].get()->getPosition());
       //   cube->draw();
-      // }
-
-      // for (auto& sphere : m_spheres) {
-      //   glm::vec3 position = glm::vec3{.0, .0, .0};
-      //   glm::mat4 model = glm::mat4(1.0f);
-      //   float angle = 20.0f * offset++;
-      //
-      //   model = glm::translate(model, position);
-      //   m_objectShader->setUniformMat4f("uModel", model);
-      //   // m_objectShader->setUniform3f("uLightPosition", m_lights[0].get()->getPosition());
-      //   m_objectShader->setUniform3f(
-      //       "uLightPosition",
-      //       ((bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get())->getPosition());
-      //   sphere->draw();
       // }
 
       m_objectShader->unbind();
@@ -293,6 +287,28 @@ namespace bloom {
         // print type
         switch (object.type) {
           case ObjectType::CUBE: {
+            m_objectShader->bind();
+            auto cube = (bloom::Cube*)object.get();
+
+            glm::vec3 position = cube->getPosition();
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, position);
+
+            auto light = (bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get();
+            if (light != nullptr)
+              m_objectShader->setUniform3f("uLightPosition", light->getPosition());
+            m_objectShader->setUniform1i("uUseLighting", light ? 1 : 0);
+
+            m_objectShader->setUniform3f("uMaterial.ambient", cube->getKa());
+            m_objectShader->setUniform3f("uMaterial.diffuse", cube->getKd());
+            m_objectShader->setUniform3f("uMaterial.specular", cube->getKs());
+            m_objectShader->setUniform1f("uMaterial.shininess", cube->getShininess());
+            m_objectShader->setUniformMat4f("uModel", model);
+
+            cube->draw();
+
+            m_objectShader->unbind();
+            break;
           }
           case ObjectType::SPHERE: {
             m_objectShader->bind();
@@ -340,16 +356,6 @@ namespace bloom {
         }
       }
 
-      // for (auto& light : m_lights) {
-      //   light->setPosition(m_translation);
-      //   glm::vec3 position = light->getPosition();
-      //   glm::mat4 model = glm::mat4(1.0f);
-      //
-      //   model = glm::translate(model, position);
-      //   m_lightShader->setUniformMat4f("uModel", model);
-      //   light->draw();
-      // }
-
       m_lightShader->unbind();
     }
 
@@ -384,13 +390,71 @@ namespace bloom {
       }
 
       switch (currentSelected.type) {
-        case ObjectType::CUBE:
-        case ObjectType::SPHERE: {
+        case ObjectType::CUBE: {
+          auto cube = (bloom::Cube*)object;
+          ImGui::Separator();
+          ImGui::Spacing();
+          ImGui::Text("Object");
+
+          float side = cube->getSide();
+
+          // In the same line three inputs for: radius, sectors and stacks
+          ImGui::SliderFloat("Side", &side, 0.0f, 100.0f);
+
+          if (side != cube->getSide()) {
+            cube->setSide(side);
+          }
+
           ImGui::Separator();
           ImGui::Spacing();
           ImGui::Text("Material");
 
+          glm::vec3 ka = cube->getKa();
+          glm::vec3 kd = cube->getKd();
+          glm::vec3 ks = cube->getKs();
+          int32_t shininess = cube->getShininess();
+
+          ImGui::ColorEdit3("Light ambient", glm::value_ptr(ka));
+          ImGui::ColorEdit3("Light diffuse", glm::value_ptr(kd));
+          ImGui::ColorEdit3("Light specular", glm::value_ptr(ks));
+          ImGui::InputInt("Shininess", &shininess);
+
+          if (ka != cube->getKa() || kd != cube->getKd() || ks != cube->getKs()
+              || shininess != cube->getShininess()) {
+            cube->setKa(ka);
+            cube->setKd(kd);
+            cube->setKs(ks);
+            cube->setShininess(shininess);
+          }
+
+          break;
+        }
+        case ObjectType::SPHERE: {
           auto sphere = (bloom::Sphere*)object;
+
+          ImGui::Separator();
+          ImGui::Spacing();
+          ImGui::Text("Object");
+
+          float radius = sphere->getRadius();
+          int32_t sectors = sphere->getSectorCount();
+          int32_t stacks = sphere->getStackCount();
+
+          // In the same line three inputs for: radius, sectors and stacks
+          ImGui::SliderFloat("Radius", &radius, 0.0f, 100.0f);
+          ImGui::SliderInt("Sectors", &sectors, 3, 100);
+          ImGui::SliderInt("Stacks", &stacks, 2, 100);
+
+          if (radius != sphere->getRadius() || sectors != sphere->getSectorCount()
+              || stacks != sphere->getStackCount()) {
+            sphere->setRadius(radius);
+            sphere->setSectorCount(sectors);
+            sphere->setStackCount(stacks);
+          }
+
+          ImGui::Separator();
+          ImGui::Spacing();
+          ImGui::Text("Material");
 
           glm::vec3 ka = sphere->getKa();
           glm::vec3 kd = sphere->getKd();
@@ -430,10 +494,8 @@ namespace bloom {
         if (ImGui::BeginMenu("Create element")) {
           if (ImGui::MenuItem("Sphere")) m_modalSphere = true;
 
-          if (ImGui::MenuItem("Cube")) {
-            hierarchyObjects.emplace_back(
-                Objects{ObjectType::CUBE, "Cube", (int32_t)m_cubes.size()});
-          }
+          if (ImGui::MenuItem("Cube")) m_modalCube = true;
+
           if (ImGui::MenuItem("Light")) {
             // hierarchyObjects.emplace_back(
             //     Objects{ObjectType::LIGHT, "Light", (int32_t)m_lights.size()});
@@ -467,15 +529,23 @@ namespace bloom {
         ImGui::EndPopup();
       }
 
-      if (m_modalSphere == true) ImGui::OpenPopup("add_sphere");
+      {  // Modals
+        if (m_modalSphere == true) ImGui::OpenPopup("add_sphere");
+        if (m_modalCube == true) ImGui::OpenPopup("add_cube");
 
-      // Always center this window when appearing
-      ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-      ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        // Always center this window when appearing
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-      if (ImGui::BeginPopupModal("add_sphere", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-        addSphere();
-        m_modalSphere = false;
+        if (ImGui::BeginPopupModal("add_sphere", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+          addSphere();
+          m_modalSphere = false;
+        }
+
+        if (ImGui::BeginPopupModal("add_cube", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+          addCube();
+          m_modalCube = false;
+        }
       }
 
       ImGui::Text("Hierarchy");
@@ -511,38 +581,40 @@ namespace bloom {
       const std::string repeated = fmt::format("({})", size);
       const std::string sphereName = fmt::format("Sphere{}", size >= 1 ? repeated : "");
 
-      if (!m_editing) {
+      if (!m_editingSphere) {
         std::string resultName = name ? *name : sphereName;
         // std::string to char*
-        namePtr = new char[resultName.size() + 1];
-        std::copy(resultName.begin(), resultName.end(), namePtr);
+        namePtrSphere = new char[resultName.size() + 1];
+        std::copy(resultName.begin(), resultName.end(), namePtrSphere);
         // Create buffer
-        resultPosition = position ? *position : glm::vec3(0.0f);
-        resultRadius = radius ? *radius : 1.0f;
-        m_editing = true;
+        resultPositionSphere = position ? *position : glm::vec3(0.0f);
+        resultRadiusSphere = radius ? *radius : 1.0f;
+        resultColorCube = glm::vec3(1.0f);
+        m_editingSphere = true;
       }
 
-      ImGui::InputText("Name", namePtr, 64);
+      ImGui::InputText("Name", namePtrSphere, 64);
       ImGui::Separator();
 
-      ImGui::InputFloat3("Position", glm::value_ptr(resultPosition));
+      ImGui::InputFloat3("Position", glm::value_ptr(resultPositionSphere));
       ImGui::Separator();
 
-      ImGui::InputFloat("Radius", &resultRadius);
+      ImGui::InputFloat("Radius", &resultRadiusSphere);
       ImGui::Spacing();
 
-      ImGui::ColorEdit3("Color", glm::value_ptr(resultColor));
+      ImGui::ColorEdit3("Color", glm::value_ptr(resultColorSphere));
       ImGui::Spacing();
 
       if (ImGui::Button("OK", ImVec2(120, 0))) {
         ImGui::CloseCurrentPopup();
-        m_editing = false;
+        m_editingSphere = false;
 
-        hierarchyObjects.emplace_back(Objects{
-            ObjectType::SPHERE,
-            namePtr,
-            (int32_t)getObjectByType<ObjectType::SPHERE>().size(),
-            {.sphere = new bloom::Sphere(resultPosition, resultColor, resultRadius, 30, 30)}});
+        hierarchyObjects.emplace_back(
+            Objects{ObjectType::SPHERE,
+                    namePtrSphere,
+                    (int32_t)getObjectByType<ObjectType::SPHERE>().size(),
+                    {.sphere = new bloom::Sphere(resultPositionSphere, resultColorSphere,
+                                                 resultRadiusSphere, 30, 30)}});
       }
       ImGui::SetItemDefaultFocus();
       ImGui::SameLine();
@@ -552,6 +624,55 @@ namespace bloom {
       ImGui::EndPopup();
 
       m_modalSphere = false;
+    }
+
+    void Light::addCube(std::string* name, glm::vec3* position, float* side) {
+      const auto size = getObjectByType<ObjectType::CUBE>().size();
+      const std::string repeated = fmt::format("({})", size);
+      const std::string cubeName = fmt::format("Cube{}", size >= 1 ? repeated : "");
+
+      if (!m_editingSphere) {
+        std::string resultName = name ? *name : cubeName;
+        // std::string to char*
+        namePtrCube = new char[resultName.size()];
+        std::copy(resultName.begin(), resultName.end(), namePtrCube);
+        // Create buffer
+        resultPositionCube = position ? *position : glm::vec3(0);
+        resultSideCube = side ? *side : .5f;
+        resultColorCube = glm::vec3(1.0f);
+        m_editingCube = true;
+      }
+
+      ImGui::InputText("Name", namePtrCube, 64);
+      ImGui::Separator();
+
+      ImGui::InputFloat3("Position", glm::value_ptr(resultPositionCube));
+      ImGui::Separator();
+
+      ImGui::InputFloat("Side", &resultSideCube);
+      ImGui::Spacing();
+
+      ImGui::ColorEdit3("Color", glm::value_ptr(resultColorCube));
+      ImGui::Spacing();
+
+      if (ImGui::Button("OK", ImVec2(120, 0))) {
+        ImGui::CloseCurrentPopup();
+        m_editingCube = false;
+
+        hierarchyObjects.emplace_back(Objects{
+            ObjectType::CUBE,
+            "Cube",
+            (int32_t)getObjectByType<ObjectType::CUBE>().size(),
+            {.cube = new bloom::Cube(resultPositionCube, resultSideCube, resultColorCube)}});
+      }
+      ImGui::SetItemDefaultFocus();
+      ImGui::SameLine();
+
+      if (ImGui::Button("Cancel", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
+
+      ImGui::EndPopup();
+
+      m_modalCube = false;
     }
 
     void Light::enableGuizmo() {

@@ -1,5 +1,8 @@
 ## Crítico
 
+- <Space> para subir apenas em Y
+- <Shift> para descer apenas em Y
+
 - Criar objeto com posição inicial diferente buga gizmo.
 - Luzes com posições zoadas.
 - Atenuância não pegando ao movimentar as luzes, apenas o objeto.

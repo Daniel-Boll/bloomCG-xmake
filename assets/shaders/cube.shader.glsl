@@ -13,7 +13,6 @@ uniform mat4 uProjection;
 
 void main() {
   gl_Position = uProjection * uView * uModel * position;
-  /* gl_Position = uView * uModel * position; */
   v_position = vec3(uModel * position);
   // TODO: probably extract this to the CPU and give as uNormalMatrix
   v_normal = mat3(transpose(inverse(uModel))) * normals;
@@ -84,6 +83,7 @@ void main() {
     vec3 result = (ambient + diffuse + specular);
     color = vec4(result, 1.0);
   } else {
-    color = vec4(uMaterial.ambient, 1.0);
+    /* color = vec4(uMaterial.ambient, 1.0); */
+    color = vec4(0.0);
   }
 }
