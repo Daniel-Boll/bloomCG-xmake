@@ -17,7 +17,7 @@ namespace bloom {
               // but has normals values correct
   };
 
-  class Cube : public Model {
+  class Cube : public Object {
   protected:
     static bloom::IndexBuffer *m_indexBuffer;
     static bloom::VertexBufferLayout *m_vertexBufferIndexedLayout;
@@ -39,6 +39,9 @@ namespace bloom {
 
     glm::vec3 m_objectKa, m_objectKd, m_objectKs;
     float m_objectShininess;
+
+    glm::vec3 m_appliedRotation = glm::vec3(0.0f);
+    glm::vec3 m_appliedScale = glm::vec3(1.0f);
 
     void generateIndexedVertices();
     void generateRepeatedVertices();
@@ -73,6 +76,11 @@ namespace bloom {
     glm::vec3 getKd();
     glm::vec3 getKs();
     float getShininess();
+
+    glm::vec3 getAppliedRotation();
+    glm::vec3 getAppliedScale();
+    void setAppliedRotation(glm::vec3 rotation);
+    void setAppliedScale(glm::vec3 scale);
 
     ~Cube();
   };

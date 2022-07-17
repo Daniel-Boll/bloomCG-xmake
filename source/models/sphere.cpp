@@ -211,6 +211,11 @@ namespace bloom {
     buildVertices();
   }
 
+  glm::vec3 Sphere::getAppliedRotation() { return m_appliedRotation; }
+  glm::vec3 Sphere::getAppliedScale() { return m_appliedScale; }
+  void Sphere::setAppliedRotation(glm::vec3 rotation) { m_appliedRotation = rotation; }
+  void Sphere::setAppliedScale(glm::vec3 scale) { m_appliedScale = scale; }
+
   void Sphere::shiftVertex() {
     for (std::size_t i = 0; i < m_positions.size(); i += 3) {
       m_positions[i] += m_center.x;

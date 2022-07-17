@@ -11,7 +11,6 @@
 ## Possíveis melhorias
 
 - Adicionar sombreamento
-- Adicionar cubo
 
 ## Requisitos
 
@@ -28,7 +27,7 @@ cena, em um primeiro momento, pode ser realizada com parâmetros pré-definidos,
 
 - [X] 1. (completo)
 - [X] 2. Adicionar limpeza da cena (completo)
-- [ ] 3. Adicionar transformações de rotação e escala.
+- [X] 3. Adicionar transformações de rotação e escala. (completo)
 - [ ] 4. Adicionar possibilidade de informar P, view-up, tipo de projeção, distância aos planos Near, Far e plano de projeção.
   - [ ] 4.1 Adicionar sinalizadores
 - [ ] 5. Adicionar sombreamento constante e Gouraud. Bem como poder escolher qual método será aplicado.
@@ -37,5 +36,5 @@ cena, em um primeiro momento, pode ser realizada com parâmetros pré-definidos,
 
 **Soma** *a priori* dos pontos:
 $$
-35 * 1.2 = 42
+50 * 1.2 = 60
 $$

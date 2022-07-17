@@ -7,6 +7,7 @@
 #include <bloomCG/core/core.hpp>
 #include <bloomCG/core/renderer.hpp>
 #include <bloomCG/scenes/light.hpp>
+#include <bloomCG/structures/shader.hpp>
 #include <cstddef>
 
 #include "ImGuizmo.h"
@@ -52,7 +53,7 @@ struct Objects {
     bloom::Camera* camera;
   } object;
 
-  bloom::Model* get() {
+  bloom::Entity* get() {
     // Check for the current type of the struct, then return the object
     switch (type) {
       case ObjectType::CUBE:
@@ -111,27 +112,29 @@ namespace bloom {
     bool m_wireframe = false;
     bool m_depthBuffer = true;
 
+    // clang-format off
     // +++++++++++++++++++ MODAL +++++++++++++++++++++++++
     /*                                                  */
     /**/ std::size_t bufferSize = sizeof(char) * 30;
     /*                                                  */
     /*                     SPHERE                       */
-    /**/ bool m_modalSphere = false;
-    /**/ bool m_editingSphere = false;
-    /**/ char* namePtrSphere;
-    /**/ glm::vec3 resultPositionSphere;
-    /**/ glm::vec3 resultColorSphere;
-    /**/ float resultRadiusSphere;
+    /**/ bool m_modalSphere = false;                    /**/
+    /**/ bool m_editingSphere = false;                  /**/
+    /**/ char* namePtrSphere;                           /**/
+    /**/ glm::vec3 resultPositionSphere;                /**/
+    /**/ glm::vec3 resultColorSphere;                   /**/
+    /**/ float resultRadiusSphere;                      /**/
     /*                                                  */
     /*                      CUBE                        */
-    /**/ bool m_modalCube = false;
-    /**/ bool m_editingCube = false;
-    /**/ char* namePtrCube;
-    /**/ glm::vec3 resultPositionCube;
-    /**/ glm::vec3 resultColorCube;
-    /**/ float resultSideCube;
+    /**/ bool m_modalCube = false;                      /**/
+    /**/ bool m_editingCube = false;                    /**/
+    /**/ char* namePtrCube;                             /**/
+    /**/ glm::vec3 resultPositionCube;                  /**/
+    /**/ glm::vec3 resultColorCube;                     /**/
+    /**/ float resultSideCube;                          /**/
     /*                                                  */
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // clang-format on
 
     // ==== Camera ====
     bloom::Camera* cameraObject;
@@ -139,6 +142,9 @@ namespace bloom {
 
     // ==== Inspector ====
     bool m_editingInspector = false;
+
+    // ==== Shaders ====
+    ShaderMap* shaders;
 
     Light::Light() : m_translation(0.0f, 0.0f, 0.0f) {
       GLCall(glad_glEnable(GL_BLEND));
@@ -152,9 +158,6 @@ namespace bloom {
 
       cameraObject = (bloom::Camera*)getObjectByTypeRef<ObjectType::CAMERA>(0).get();
 
-      // Get window width
-      // int width, height;
-      // glfwGetWindowSize(bloom::gl::getWindow(), &width, &height);
       int width = 1920 / 2, height = 1080 / 2;
 
       const double fov = 45.0f;
@@ -176,34 +179,29 @@ namespace bloom {
           glm::vec3(0.0f, 0.0f, 0.0f),
       };
 
-      // For each cube position create a cube object
-      // int cubeCount = sizeof(cubePositions) / sizeof(cubePositions[0]);
-      // for (int i = 0; i < cubeCount; i++)
-      //   m_cubes.push_back(std::make_unique<bloom::Cube>(2.f, cubePositions[i],
-      //   CubeType::REPEATED));
-
       // ================ Setting up Sphere ================
       hierarchyObjects.emplace_back(
           Objects{ObjectType::SPHERE,
                   "Sphere",
                   0,
-                  {.sphere = new bloom::Sphere(glm::vec3{0, 0, 0}, glm::vec3{1, 0, 0}, .5,
+                  {.sphere = new bloom::Sphere(glm::vec3{0, 0, 0}, glm::vec3{1, 0, 0}, 2,
                                                m_sectorCount, m_stackCount)}});
-      // m_spheres.push_back(
-      //     std::make_unique<bloom::Sphere>(glm::vec3{0, 0, 0}, .5, m_sectorCount, m_stackCount));
-      // m_spheres.push_back(std::make_unique<bloom::Sphere>(glm::vec3{0, 0, 0}, 1., 7, 8));
 
-      // m_cubes[0]->print();
+      // ================ Setting up Shaders ================
+      // Get current directory
+      const std::string cd = std::filesystem::current_path().string();
+      auto at
+          = [cd](const std::string& path) { return cd + "/../../../../assets/shaders/" + path; };
 
-      // TODO: Change this to get CORRECTLY
-      m_objectShader = std::make_unique<bloom::Shader>(
-          "/home/danielboll/dev/Unioeste/2022/CG/bloomCG-xmake/assets/shaders/cube.shader.glsl");
-      m_objectShader->bind();
-      m_objectShader->setUniform1f("uLight.constant", 1.0f);
-      m_objectShader->setUniform1f("uLight.linear", .09f);
-      m_objectShader->setUniform1f("uLight.quadratic", .032f);
+      shaders->registerShader<ShaderType::Object, LightModel::Phong>(at("object.shader.phong.glsl"))
+          ->registerShader<ShaderType::Object, LightModel::Gouraud>(
+              at("object.shader.gouraud.glsl"))
+          ->registerShader<ShaderType::Light, LightModel::Phong>(at("light.shader.glsl"));
 
-      m_objectShader->unbind();
+      // m_objectShader->setUniform1f("uLight.constant", 1.0f);
+      // m_objectShader->setUniform1f("uLight.linear", .09f);
+      // m_objectShader->setUniform1f("uLight.quadratic", .032f);
+      // m_lightShader->setUniform4f("uColor", lightColor);
       // ==========================================================
 
       // =================== Lights in the scene ================
@@ -221,55 +219,32 @@ namespace bloom {
                                               i,
                                               {.light = new bloom::Light(lightPositions[i])}});
 
-      m_lightShader = std::make_unique<bloom::Shader>(
-          "/home/danielboll/dev/Unioeste/2022/CG/bloomCG-xmake/assets/shaders/light.shader.glsl");
-      m_lightShader->bind();
-      m_lightShader->setUniform4f("uColor", lightColor);
-      m_lightShader->unbind();
+      // m_lightShader->setUniform4f("uColor", lightColor);
       // ==========================================================
     }
 
-    void Light::onUpdate(const float deltaTime) {
-      cameraObject->update(deltaTime);
-
-      // for (auto& light : m_lights) light.get()->setPosition(m_translation);
-
-      // m_spheres[0]->setSectorCount(m_sectorCount);
-      // m_spheres[0]->setStackCount(m_stackCount);
-    }
+    void Light::onUpdate(const float deltaTime) { cameraObject->update(deltaTime); }
 
     void Light::onRender(const float deltaTime) {
       GLCall(glad_glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
       GLCall(glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
       GLCall(m_depthBuffer ? glad_glEnable(GL_DEPTH_TEST) : glad_glDisable(GL_DEPTH_TEST));
 
-      m_objectShader->bind();
-      m_objectShader->setUniformMat4f("uView", cameraObject->getViewMatrix());
-      m_objectShader->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix());
-      m_objectShader->setUniform3f("uCameraPosition", cameraObject->getPosition());
+      auto objectShader = shaders->get<ShaderType::Object, LightModel::Phong>();
+      objectShader->bind()
+          ->setUniformMat4f("uView", cameraObject->getViewMatrix())
+          ->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix())
+          ->setUniform3f("uCameraPosition", cameraObject->getPosition())
+          ->setUniform3f("uLight.ambient", m_lightAmbient)
+          ->setUniform3f("uLight.diffuse", m_lightDiffuse)
+          ->setUniform3f("uLight.specular", m_lightSpecular);
+      objectShader->unbind();
 
-      m_objectShader->setUniform3f("uLight.ambient", m_lightAmbient);
-      m_objectShader->setUniform3f("uLight.diffuse", m_lightDiffuse);
-      m_objectShader->setUniform3f("uLight.specular", m_lightSpecular);
-
-      uint32_t offset = 0;
-      // for (auto& cube : m_cubes) {
-      //   glm::vec3 position = cube->getPosition();
-      //   glm::mat4 model = glm::mat4(1.0f);
-      //   float angle = 20.0f * offset++;
-      //
-      //   model = glm::translate(model, position);
-      //   model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-      //   m_objectShader->setUniformMat4f("uModel", model);
-      //   m_objectShader->setUniform3f("uLightPosition", m_lights[0].get()->getPosition());
-      //   cube->draw();
-      // }
-
-      m_objectShader->unbind();
-
-      m_lightShader->bind();
-      m_lightShader->setUniformMat4f("uView", cameraObject->getViewMatrix());
-      m_lightShader->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix());
+      auto lightShader = shaders->get<ShaderType::Light, LightModel::Phong>();
+      lightShader->bind()
+          ->setUniformMat4f("uView", cameraObject->getViewMatrix())
+          ->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix());
+      lightShader->unbind();
 
       // Move the light in a orbit around the center
       // m_translation.x = sin(glfwGetTime()) * 5.0f;
@@ -284,79 +259,75 @@ namespace bloom {
 
       // Loop through the hierarchyObjects and draw them
       for (auto& object : hierarchyObjects) {
-        // print type
         switch (object.type) {
-          case ObjectType::CUBE: {
-            m_objectShader->bind();
-            auto cube = (bloom::Cube*)object.get();
-
-            glm::vec3 position = cube->getPosition();
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, position);
-
-            auto light = (bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get();
-            if (light != nullptr)
-              m_objectShader->setUniform3f("uLightPosition", light->getPosition());
-            m_objectShader->setUniform1i("uUseLighting", light ? 1 : 0);
-
-            m_objectShader->setUniform3f("uMaterial.ambient", cube->getKa());
-            m_objectShader->setUniform3f("uMaterial.diffuse", cube->getKd());
-            m_objectShader->setUniform3f("uMaterial.specular", cube->getKs());
-            m_objectShader->setUniform1f("uMaterial.shininess", cube->getShininess());
-            m_objectShader->setUniformMat4f("uModel", model);
-
-            cube->draw();
-
-            m_objectShader->unbind();
-            break;
-          }
+          case ObjectType::CUBE:
           case ObjectType::SPHERE: {
-            m_objectShader->bind();
-            auto sphere = (bloom::Sphere*)object.get();
+            auto _object = (bloom::Object*)object.get();
+            glm::vec3 position = _object->getPosition();
 
-            glm::vec3 position = sphere->getPosition();
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, position);
 
+            auto appliedRotation = _object->getAppliedRotation();
+            model
+                = glm::rotate(model, glm::radians(appliedRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+            model
+                = glm::rotate(model, glm::radians(appliedRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+            model
+                = glm::rotate(model, glm::radians(appliedRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+            auto appliedScale = _object->getAppliedScale();
+            model = glm::scale(model, appliedScale);
+
+            objectShader->bind()
+                ->setUniform3f("uMaterial.ambient", _object->getKa())
+                ->setUniform3f("uMaterial.diffuse", _object->getKd())
+                ->setUniform3f("uMaterial.specular", _object->getKs())
+                ->setUniform1f("uMaterial.shininess", _object->getShininess())
+                ->setUniform1f("uLight.constant", 1.0f)
+                ->setUniform1f("uLight.linear", .09f)
+                ->setUniform1f("uLight.quadratic", .032f)
+                // ->setUniform3f("uObjectColor", glm::vec3(1.0f, 0.0f, 0.0f)) // Just turn this on
+                // when on Gouraud
+                ->setUniformMat4f("uModel", model);
+
+            // m_objectShader->setUniform1f("uLight.constant", 1.0f);
+            // m_objectShader->setUniform1f("uLight.linear", .09f);
+            // m_objectShader->setUniform1f("uLight.quadratic", .032f);
+            // m_lightShader->setUniform4f("uColor", lightColor);
+
             auto light = (bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get();
             if (light != nullptr)
-              m_objectShader->setUniform3f("uLightPosition", light->getPosition());
-            m_objectShader->setUniform1i("uUseLighting", light ? 1 : 0);
+              objectShader->setUniform3f("uLightPosition", light->getPosition());
+            objectShader->setUniform1i("uUseLighting", light ? 1 : 0);
 
-            m_objectShader->setUniform3f("uMaterial.ambient", sphere->getKa());
-            m_objectShader->setUniform3f("uMaterial.diffuse", sphere->getKd());
-            m_objectShader->setUniform3f("uMaterial.specular", sphere->getKs());
-            m_objectShader->setUniform1f("uMaterial.shininess", sphere->getShininess());
-            m_objectShader->setUniformMat4f("uModel", model);
-
-            sphere->draw();
-
-            m_objectShader->unbind();
+            _object->draw();
+            objectShader->unbind();
             break;
           }
           case ObjectType::LIGHT: {
-            bloom::Light* light = (bloom::Light*)object.get();
-            m_lightShader->bind();
+            auto light = (bloom::Light*)object.get();
             glm::vec3 position = object.get()->getPosition();
             glm::mat4 model = glm::mat4(1.0f);
             // reduce 1 of each coordinate of the position
-            position.x -= .5f;
-            position.y -= 2.1f;
-            position.z += 1.0f;
+            // position.x -= .5f;
+            // position.y -= 2.1f;
+            // position.z += 1.0f;
             // 0.5f, 2.1f, -1.0f
 
             model = glm::translate(model, position);
-            m_lightShader->setUniformMat4f("uModel", model);
+            lightShader->bind()
+                ->setUniformMat4f("uModel", model)
+                ->setUniform4f("uColor", glm::vec4{1});
             light->draw();
-            m_lightShader->unbind();
+            lightShader->unbind();
+
             break;
           }
           case ObjectType::CAMERA:
             break;
         }
       }
-
-      m_lightShader->unbind();
     }
 
     void Light::inspector() {
@@ -376,7 +347,7 @@ namespace bloom {
       ImGui::Spacing();
       ImGui::Text("Transform");
 
-      auto object = (bloom::Model*)currentSelected.get();
+      auto object = (bloom::Object*)currentSelected.get();
       {  // Transform
         glm::vec3 position = object->getPosition();
 
@@ -386,6 +357,41 @@ namespace bloom {
         // If the position has changed, we update the object's position
         if (position != object->getPosition()) {
           object->setPosition(position);
+        }
+
+        glm::vec3 appliedRotation = object->getAppliedRotation();
+        glm::vec3 appliedScale = object->getAppliedScale();
+
+        ImGui::SliderFloat3("Rotation", glm::value_ptr(appliedRotation), 0, 360.0f);
+        ImGui::SliderFloat3("Scale", glm::value_ptr(appliedScale), 0, 10.0f);
+
+        if (appliedRotation != object->getAppliedRotation()) {
+          object->setAppliedRotation(glm::vec3(appliedRotation));
+        }
+        if (appliedScale != object->getAppliedScale()) {
+          object->setAppliedScale(glm::vec3(appliedScale));
+        }
+
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Text("Material");
+
+        glm::vec3 ka = object->getKa();
+        glm::vec3 kd = object->getKd();
+        glm::vec3 ks = object->getKs();
+        int32_t shininess = object->getShininess();
+
+        ImGui::ColorEdit3("Light ambient", glm::value_ptr(ka));
+        ImGui::ColorEdit3("Light diffuse", glm::value_ptr(kd));
+        ImGui::ColorEdit3("Light specular", glm::value_ptr(ks));
+        ImGui::InputInt("Shininess", &shininess);
+
+        if (ka != object->getKa() || kd != object->getKd() || ks != object->getKs()
+            || shininess != object->getShininess()) {
+          object->setKa(ka);
+          object->setKd(kd);
+          object->setKs(ks);
+          object->setShininess(shininess);
         }
       }
 
@@ -404,29 +410,6 @@ namespace bloom {
           if (side != cube->getSide()) {
             cube->setSide(side);
           }
-
-          ImGui::Separator();
-          ImGui::Spacing();
-          ImGui::Text("Material");
-
-          glm::vec3 ka = cube->getKa();
-          glm::vec3 kd = cube->getKd();
-          glm::vec3 ks = cube->getKs();
-          int32_t shininess = cube->getShininess();
-
-          ImGui::ColorEdit3("Light ambient", glm::value_ptr(ka));
-          ImGui::ColorEdit3("Light diffuse", glm::value_ptr(kd));
-          ImGui::ColorEdit3("Light specular", glm::value_ptr(ks));
-          ImGui::InputInt("Shininess", &shininess);
-
-          if (ka != cube->getKa() || kd != cube->getKd() || ks != cube->getKs()
-              || shininess != cube->getShininess()) {
-            cube->setKa(ka);
-            cube->setKd(kd);
-            cube->setKs(ks);
-            cube->setShininess(shininess);
-          }
-
           break;
         }
         case ObjectType::SPHERE: {
@@ -451,29 +434,6 @@ namespace bloom {
             sphere->setSectorCount(sectors);
             sphere->setStackCount(stacks);
           }
-
-          ImGui::Separator();
-          ImGui::Spacing();
-          ImGui::Text("Material");
-
-          glm::vec3 ka = sphere->getKa();
-          glm::vec3 kd = sphere->getKd();
-          glm::vec3 ks = sphere->getKs();
-          int32_t shininess = sphere->getShininess();
-
-          ImGui::ColorEdit3("Light ambient", glm::value_ptr(ka));
-          ImGui::ColorEdit3("Light diffuse", glm::value_ptr(kd));
-          ImGui::ColorEdit3("Light specular", glm::value_ptr(ks));
-          ImGui::InputInt("Shininess", &shininess);
-
-          if (ka != sphere->getKa() || kd != sphere->getKd() || ks != sphere->getKs()
-              || shininess != sphere->getShininess()) {
-            sphere->setKa(ka);
-            sphere->setKd(kd);
-            sphere->setKs(ks);
-            sphere->setShininess(shininess);
-          }
-
           break;
         }
         case ObjectType::LIGHT: {
@@ -661,7 +621,7 @@ namespace bloom {
 
         hierarchyObjects.emplace_back(Objects{
             ObjectType::CUBE,
-            "Cube",
+            namePtrCube,
             (int32_t)getObjectByType<ObjectType::CUBE>().size(),
             {.cube = new bloom::Cube(resultPositionCube, resultSideCube, resultColorCube)}});
       }

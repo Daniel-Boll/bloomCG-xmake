@@ -6,7 +6,9 @@
 #include <glad/glad.h>
 
 #include <bloomCG/core/input.hpp>
+#include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <glm/glm.hpp>
@@ -18,5 +20,3 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <cmath>
-#include <filesystem>

@@ -51,34 +51,33 @@ uniform Material uMaterial;
 uniform Light uLight;
 uniform bool uUseLighting;
 
-// TODO: Reintroduce textures later
 void main() { 
   // Check if uLightPosition was set
   if (uUseLighting) {
-  // ==== Ambient Light ====
-  vec3 ambient = uLight.ambient * uMaterial.ambient;
+    // ==== Ambient Light ====
+    vec3 ambient = uLight.ambient * uMaterial.ambient;
 
-  // ==== Diffuse Light ====
-  vec3 norm = normalize(v_normal);
-  vec3 lightDirection = normalize(uLightPosition - v_position);
-  
-  float diff = max(dot(norm, lightDirection), 0.0);
-  vec3 diffuse = uLight.diffuse * (diff * uMaterial.diffuse);
+    // ==== Diffuse Light ====
+    vec3 norm = normalize(v_normal);
+    vec3 lightDirection = normalize(uLightPosition - v_position);
+    
+    float diff = max(dot(norm, lightDirection), 0.0);
+    vec3 diffuse = uLight.diffuse * (diff * uMaterial.diffuse);
 
-  // ==== Specular Light ====
-  vec3 viewDirection = normalize(uCameraPosition - v_position);
-  vec3 reflectDirection = reflect(-lightDirection, norm);
+    // ==== Specular Light ====
+    vec3 viewDirection = normalize(uCameraPosition - v_position);
+    vec3 reflectDirection = reflect(-lightDirection, norm);
 
-  float spec = pow(max(dot(viewDirection, reflectDirection), 0.0), uMaterial.shininess);
-  vec3 specular = uLight.specular * (spec * uMaterial.specular);
+    float spec = pow(max(dot(viewDirection, reflectDirection), 0.0), uMaterial.shininess);
+    vec3 specular = uLight.specular * (spec * uMaterial.specular);
 
-  // ==== Attenuation ====
-  float distance = length(uLight.position - v_position);
-  float attenuation = 1.0 / (uLight.constant + uLight.linear * distance + uLight.quadratic * (distance * distance));
+    // ==== Attenuation ====
+    float distance = length(uLight.position - v_position);
+    float attenuation = 1.0 / (uLight.constant + uLight.linear * distance + uLight.quadratic * (distance * distance));
 
-  ambient *= attenuation;
-  diffuse *= attenuation;
-  specular *= attenuation;
+    ambient *= attenuation;
+    diffuse *= attenuation;
+    specular *= attenuation;
 
     vec3 result = (ambient + diffuse + specular);
     color = vec4(result, 1.0);

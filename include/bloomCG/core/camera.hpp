@@ -7,7 +7,7 @@ namespace bloom {
 
   enum class CameraType { PERSPECTIVE, AXONOMETRIC };
 
-  class Camera : public Model {
+  class Camera : public Entity {
   private:
     glm::vec3 m_cameraPosition, m_cameraFront, m_cameraUp;
     glm::vec3 m_direction;

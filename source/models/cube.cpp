@@ -258,6 +258,11 @@ namespace bloom {
   void Cube::setKs(glm::vec3 ks) { m_objectKs = ks; }
   void Cube::setShininess(float shininess) { m_objectShininess = shininess; }
 
+  glm::vec3 Cube::getAppliedRotation() { return m_appliedRotation; }
+  glm::vec3 Cube::getAppliedScale() { return m_appliedScale; }
+  void Cube::setAppliedRotation(glm::vec3 rotation) { m_appliedRotation = rotation; }
+  void Cube::setAppliedScale(glm::vec3 scale) { m_appliedScale = scale; }
+
   float Cube::getSide() { return m_size; }
   glm::vec3 Cube::getColor() { return m_objectKa; }
   glm::vec3 Cube::getKa() { return m_objectKa; }

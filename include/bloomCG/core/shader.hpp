@@ -19,15 +19,15 @@ namespace bloom {
     Shader(const std::string &filename);
     ~Shader();
 
-    void bind() const;
+    Shader *bind();
     void unbind() const;
 
     // Set uniforms
-    void setUniformMat4f(const std::string &name, const glm::mat4 &matrix);
-    void setUniform1f(const std::string &name, const float &value);
-    void setUniform3f(const std::string &name, const glm::vec3 &value);
-    void setUniform4f(const std::string &name, const glm::vec4 &value);
-    void setUniform1i(const std::string &name, int value);
+    Shader *setUniformMat4f(const std::string &name, const glm::mat4 &matrix);
+    Shader *setUniform1f(const std::string &name, const float &value);
+    Shader *setUniform3f(const std::string &name, const glm::vec3 &value);
+    Shader *setUniform4f(const std::string &name, const glm::vec4 &value);
+    Shader *setUniform1i(const std::string &name, int value);
 
   private:
     [[nodiscard]] uint32_t compileShader(GLenum type, const std::string &source);

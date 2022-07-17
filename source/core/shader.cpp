@@ -11,28 +11,36 @@ namespace bloom {
 
   Shader::~Shader() { GLCall(glad_glDeleteProgram((m_rendererID))); }
 
-  void Shader::bind() const { GLCall(glad_glUseProgram(m_rendererID)); }
+  Shader* Shader::bind() {
+    GLCall(glad_glUseProgram(m_rendererID));
+    return this;
+  }
 
   void Shader::unbind() const { GLCall(glad_glUseProgram(0)); }
 
-  void Shader::setUniformMat4f(const std::string& name, const glm::mat4& matrix) {
+  Shader* Shader::setUniformMat4f(const std::string& name, const glm::mat4& matrix) {
     GLCall(glad_glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(matrix)));
+    return this;
   }
 
-  void Shader::setUniform1i(const std::string& name, int value) {
+  Shader* Shader::setUniform1i(const std::string& name, int value) {
     GLCall(glad_glUniform1i(getUniformLocation(name), value));
+    return this;
   }
 
-  void Shader::setUniform1f(const std::string& name, const float& value) {
+  Shader* Shader::setUniform1f(const std::string& name, const float& value) {
     GLCall(glad_glUniform1f(getUniformLocation(name), value));
+    return this;
   }
 
-  void Shader::setUniform3f(const std::string& name, const glm::vec3& value) {
+  Shader* Shader::setUniform3f(const std::string& name, const glm::vec3& value) {
     GLCall(glad_glUniform3f(getUniformLocation(name), value.x, value.y, value.z));
+    return this;
   }
 
-  void Shader::setUniform4f(const std::string& name, const glm::vec4& value) {
+  Shader* Shader::setUniform4f(const std::string& name, const glm::vec4& value) {
     GLCall(glad_glUniform4f(getUniformLocation(name), value.x, value.y, value.z, value.w));
+    return this;
   }
 
   int32_t Shader::getUniformLocation(const std::string& name) {

@@ -9,7 +9,7 @@
 #include <bloomCG/models/model.hpp>
 
 namespace bloom {
-  class Sphere : public Model {
+  class Sphere : public Object {
   protected:
     bloom::IndexBuffer* m_indexBuffer;
     bloom::VertexBufferLayout* m_layoutBuffer;
@@ -35,6 +35,9 @@ namespace bloom {
     glm::vec3 m_objectKa, m_objectKd, m_objectKs;
     float m_objectShininess;
 
+    glm::vec3 m_appliedRotation = glm::vec3(0.0f);
+    glm::vec3 m_appliedScale = glm::vec3(1.0f);
+
   public:
     Sphere(glm::vec3 center, glm::vec3 color = glm::vec3{1., .0, .0}, float radius = 0.2,
            uint16_t sectorCount = 30, uint16_t stackCount = 30);
@@ -55,19 +58,21 @@ namespace bloom {
     void setKd(glm::vec3 kd);
     void setKs(glm::vec3 ks);
     void setShininess(float shininess);
+    void setPosition(glm::vec3 position);
+    float getShininess();
 
     glm::vec3 getPosition();
-    void setPosition(glm::vec3 position);
-
     glm::vec3 getColor();
     glm::vec3 getKa();
     glm::vec3 getKd();
     glm::vec3 getKs();
-    float getShininess();
 
     // Functionalities
     void draw();
-
+    glm::vec3 getAppliedRotation();
+    glm::vec3 getAppliedScale();
+    void setAppliedRotation(glm::vec3 rotation);
+    void setAppliedScale(glm::vec3 scale);
     // Debug
     void print();
 
