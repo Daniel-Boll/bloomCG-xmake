@@ -4,12 +4,9 @@
 #include <bloomCG/core/shader.hpp>
 #include <functional>
 
-enum class ShaderType { Object = 0, Light = 1 };
-enum class LightModel { Flat = 2, Gouraud = 3, Phong = 4 };
-
 namespace bloom {
-  enum class ShaderType { Object = 0, Light = 1 };
-  enum class LightModel { Flat = 2, Gouraud = 3, Phong = 4 };
+  enum class ShaderType { Object = 3, Light = 4 };
+  enum class LightModel { Flat, Gouraud, Phong };
 
   typedef std::pair<ShaderType, LightModel> Name;
 

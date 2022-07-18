@@ -10,7 +10,6 @@ uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
 
-uniform vec3 uLightPosition;
 uniform vec3 uCameraPosition;
 
 struct Material {
@@ -49,7 +48,7 @@ void main() {
 
     // ==== Diffuse Light ====
     vec3 norm = normalize(normal);
-    vec3 lightDirection = normalize(uLightPosition - position);
+    vec3 lightDirection = normalize(uLight.position - position);
     
     float diff = max(dot(norm, lightDirection), 0.0);
     vec3 diffuse = uLight.diffuse * (diff * uMaterial.diffuse);

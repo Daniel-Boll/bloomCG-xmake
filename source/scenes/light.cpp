@@ -73,6 +73,10 @@ std::ostream& operator<<(std::ostream& os, const Objects& object) {
   return os;
 }
 
+template <typename Base, typename T> inline bool instanceof (const T* ptr) {
+  return dynamic_cast<const Base*>(ptr) != nullptr;
+}
+
 namespace bloom {
   namespace scene {
     // Hierarchy
@@ -172,13 +176,6 @@ namespace bloom {
           ->setCameraSensitivity(.1);
       // ======================================================
 
-      glm::vec4 lightColor = glm::vec4{1., 1., 1., 1.};
-
-      // =================== Elements in the scene ================
-      glm::vec3 cubePositions[] = {
-          glm::vec3(0.0f, 0.0f, 0.0f),
-      };
-
       // ================ Setting up Sphere ================
       hierarchyObjects.emplace_back(
           Objects{ObjectType::SPHERE,
@@ -198,47 +195,34 @@ namespace bloom {
               at("object.shader.gouraud.glsl"))
           ->registerShader<ShaderType::Light, LightModel::Phong>(at("light.shader.glsl"));
 
-      // m_objectShader->setUniform1f("uLight.constant", 1.0f);
-      // m_objectShader->setUniform1f("uLight.linear", .09f);
-      // m_objectShader->setUniform1f("uLight.quadratic", .032f);
-      // m_lightShader->setUniform4f("uColor", lightColor);
       // ==========================================================
 
       // =================== Lights in the scene ================
       glm::vec3 lightPositions[] = {
           glm::vec3(0.5f, 2.1f, -1.0f),
-          glm::vec3(1.5f, 3.1f, -2.0f),
+          // glm::vec3(1.5f, 3.1f, -2.0f),
       };
       m_translation = glm::vec3(0.5f, 2.1f, -1.f);
 
-      // Get the vector size
       int lightCount = sizeof(lightPositions) / sizeof(lightPositions[0]);
       for (int i = 0; i < lightCount; i++)
         hierarchyObjects.emplace_back(Objects{ObjectType::LIGHT,
                                               fmt::format("Light_{}", i),
                                               i,
                                               {.light = new bloom::Light(lightPositions[i])}});
-
-      // m_lightShader->setUniform4f("uColor", lightColor);
       // ==========================================================
     }
 
-    void Light::onUpdate(const float deltaTime) { cameraObject->update(deltaTime); }
+    void Light::onUpdate(const float deltaTime) {
+      cameraObject->update(deltaTime);
+      // Update light position based on m_translation
+      ((bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get())->setPosition(m_translation);
+    }
 
     void Light::onRender(const float deltaTime) {
       GLCall(glad_glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
       GLCall(glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
       GLCall(m_depthBuffer ? glad_glEnable(GL_DEPTH_TEST) : glad_glDisable(GL_DEPTH_TEST));
-
-      auto objectShader = shaders->get<ShaderType::Object, LightModel::Phong>();
-      objectShader->bind()
-          ->setUniformMat4f("uView", cameraObject->getViewMatrix())
-          ->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix())
-          ->setUniform3f("uCameraPosition", cameraObject->getPosition())
-          ->setUniform3f("uLight.ambient", m_lightAmbient)
-          ->setUniform3f("uLight.diffuse", m_lightDiffuse)
-          ->setUniform3f("uLight.specular", m_lightSpecular);
-      objectShader->unbind();
 
       auto lightShader = shaders->get<ShaderType::Light, LightModel::Phong>();
       lightShader->bind()
@@ -247,9 +231,9 @@ namespace bloom {
       lightShader->unbind();
 
       // Move the light in a orbit around the center
-      // m_translation.x = sin(glfwGetTime()) * 5.0f;
-      // m_translation.z = cos(glfwGetTime()) * 5.0f;
-      // m_translation.y = sin(glfwGetTime()) * 5.0f;
+      m_translation.x = sin(glfwGetTime()) * 5.0f;
+      m_translation.z = cos(glfwGetTime()) * 5.0f;
+      m_translation.y = sin(glfwGetTime()) * 5.0f;
 
       if (m_wireframe) {
         GLCall(glad_glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
@@ -279,7 +263,27 @@ namespace bloom {
             auto appliedScale = _object->getAppliedScale();
             model = glm::scale(model, appliedScale);
 
-            objectShader->bind()
+            bloom::Shader* shader = nullptr;
+
+            switch ((LightModel)_object->getShading()) {
+              case LightModel::Phong:
+                shader = shaders->get<ShaderType::Object, LightModel::Phong>();
+                break;
+              case LightModel::Gouraud:
+                shader = shaders->get<ShaderType::Object, LightModel::Gouraud>();
+                break;
+              case LightModel::Flat:
+                shader = shaders->get<ShaderType::Object, LightModel::Flat>();
+                break;
+            }
+
+            shader->bind()
+                ->setUniformMat4f("uView", cameraObject->getViewMatrix())
+                ->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix())
+                ->setUniform3f("uCameraPosition", cameraObject->getPosition())
+                ->setUniform3f("uLight.ambient", m_lightAmbient)
+                ->setUniform3f("uLight.diffuse", m_lightDiffuse)
+                ->setUniform3f("uLight.specular", m_lightSpecular)
                 ->setUniform3f("uMaterial.ambient", _object->getKa())
                 ->setUniform3f("uMaterial.diffuse", _object->getKd())
                 ->setUniform3f("uMaterial.specular", _object->getKs())
@@ -287,22 +291,15 @@ namespace bloom {
                 ->setUniform1f("uLight.constant", 1.0f)
                 ->setUniform1f("uLight.linear", .09f)
                 ->setUniform1f("uLight.quadratic", .032f)
-                // ->setUniform3f("uObjectColor", glm::vec3(1.0f, 0.0f, 0.0f)) // Just turn this on
-                // when on Gouraud
+                ->setUniform3f("uObjectColor", glm::vec3(1.0f, 0.0f, 0.0f))  // Gouraud's only
                 ->setUniformMat4f("uModel", model);
 
-            // m_objectShader->setUniform1f("uLight.constant", 1.0f);
-            // m_objectShader->setUniform1f("uLight.linear", .09f);
-            // m_objectShader->setUniform1f("uLight.quadratic", .032f);
-            // m_lightShader->setUniform4f("uColor", lightColor);
-
             auto light = (bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get();
-            if (light != nullptr)
-              objectShader->setUniform3f("uLightPosition", light->getPosition());
-            objectShader->setUniform1i("uUseLighting", light ? 1 : 0);
+            if (light != nullptr) shader->setUniform3f("uLight.position", light->getPosition());
+            shader->setUniform1i("uUseLighting", light ? 1 : 0);
 
             _object->draw();
-            objectShader->unbind();
+            shader->unbind();
             break;
           }
           case ObjectType::LIGHT: {
@@ -372,6 +369,8 @@ namespace bloom {
           object->setAppliedScale(glm::vec3(appliedScale));
         }
 
+        if (! instanceof <bloom::Object>(currentSelected.get())) goto common_end;
+
         ImGui::Separator();
         ImGui::Spacing();
         ImGui::Text("Material");
@@ -393,7 +392,28 @@ namespace bloom {
           object->setKs(ks);
           object->setShininess(shininess);
         }
+
+        if (instanceof <bloom::Light>(currentSelected.get())) goto common_end;
+
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Text("Lighting model");
+
+        int32_t shading = (int32_t)object->getShading();
+
+        // Create a input list for the shading options
+        const char* shadingNames[] = {"Flat", "Gouraud", "Phong"};
+
+        ImGui::Combo("Shading", &shading, shadingNames, IM_ARRAYSIZE(shadingNames),
+                     IM_ARRAYSIZE(shadingNames));
+
+        if (shading != (int32_t)object->getShading()) {
+          fmt::print("Shading changed to {}\n", shadingNames[shading]);
+          object->setShading((bloom::Object::Shading)shading);
+        }
       }
+
+    common_end:
 
       switch (currentSelected.type) {
         case ObjectType::CUBE: {
@@ -451,12 +471,15 @@ namespace bloom {
       ImGui::Begin("Hierarchy");
 
       if (ImGui::BeginPopupContextWindow()) {
-        if (ImGui::BeginMenu("Create element")) {
-          if (ImGui::MenuItem("Sphere")) m_modalSphere = true;
+        if (ImGui::BeginMenu(ICON_FA_PLUS_CIRCLE " Create element")) {
+          if (ImGui::MenuItem(ICON_FA_CIRCLE " Sphere")) m_modalSphere = true;
 
-          if (ImGui::MenuItem("Cube")) m_modalCube = true;
+          if (ImGui::MenuItem(ICON_FA_SQUARE " Cube")) m_modalCube = true;
 
-          if (ImGui::MenuItem("Light")) {
+          // Apply yellow text color for the next line
+          ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), ICON_FA_LIGHTBULB);
+          ImGui::SameLine();
+          if (ImGui::MenuItem(" Light")) {
             // hierarchyObjects.emplace_back(
             //     Objects{ObjectType::LIGHT, "Light", (int32_t)m_lights.size()});
           }
@@ -464,20 +487,20 @@ namespace bloom {
           ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Scene controllers")) {
+        if (ImGui::BeginMenu(ICON_FA_GAMEPAD " Scene controllers")) {
           ImGui::Checkbox("Wireframe", &m_wireframe);
           ImGui::Checkbox("Depth buffer", &m_depthBuffer);
           ImGui::EndMenu();
         }
 
-        if (ImGui::MenuItem("Load .element", "CTRL+L", false, false)) {
+        if (ImGui::MenuItem(ICON_FA_FILE_UPLOAD " Load .element", "CTRL+L", false, false)) {
         }
 
-        if (ImGui::MenuItem("Save .element", "CTRL+S", false, false)) {
+        if (ImGui::MenuItem(ICON_FA_SAVE " Save .element", "CTRL+S", false, false)) {
         }
 
-        if (ImGui::MenuItem("Clear scene")) {
-          // Clear everything except for the camera
+        if (ImGui::MenuItem(ICON_FA_PAINT_ROLLER
+                            " Clear scene")) {  // Clear everything except for the camera
           auto camera = getObjectByType<ObjectType::CAMERA>(0);
 
           std::vector<Objects>().swap(hierarchyObjects);

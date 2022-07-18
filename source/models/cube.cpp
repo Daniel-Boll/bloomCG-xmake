@@ -4,8 +4,10 @@
 
 namespace bloom {
   Cube::Cube(glm::vec3 position, float side, glm::vec3 color, CubeType type)
-      : m_size(side), m_position(position), m_type(type), m_objectKa(color), m_objectKd(color) {
+      : m_size(side), m_position(position), m_type(type) {
     m_objectKs = glm::vec3{.5, .5, .5};
+    m_objectKa = color;
+    m_objectKd = color;
     m_objectShininess = 32;
 
     if (m_type == CubeType::INDEXED)
@@ -249,26 +251,7 @@ namespace bloom {
 
     setupBuffers();
   }
-  void Cube::setColor(glm::vec3 color) {
-    m_objectKa = color;
-    m_objectKd = color;
-  }
-  void Cube::setKa(glm::vec3 ka) { m_objectKa = ka; }
-  void Cube::setKd(glm::vec3 kd) { m_objectKd = kd; }
-  void Cube::setKs(glm::vec3 ks) { m_objectKs = ks; }
-  void Cube::setShininess(float shininess) { m_objectShininess = shininess; }
-
-  glm::vec3 Cube::getAppliedRotation() { return m_appliedRotation; }
-  glm::vec3 Cube::getAppliedScale() { return m_appliedScale; }
-  void Cube::setAppliedRotation(glm::vec3 rotation) { m_appliedRotation = rotation; }
-  void Cube::setAppliedScale(glm::vec3 scale) { m_appliedScale = scale; }
-
   float Cube::getSide() { return m_size; }
-  glm::vec3 Cube::getColor() { return m_objectKa; }
-  glm::vec3 Cube::getKa() { return m_objectKa; }
-  glm::vec3 Cube::getKd() { return m_objectKd; }
-  glm::vec3 Cube::getKs() { return m_objectKs; }
-  float Cube::getShininess() { return m_objectShininess; }
 
   IndexBuffer* Cube::m_indexBuffer = nullptr;
   VertexBufferLayout* Cube::m_vertexBufferIndexedLayout = nullptr;

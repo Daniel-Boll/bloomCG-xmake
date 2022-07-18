@@ -5,6 +5,7 @@
 #include <fmt/core.h>
 #include <glad/glad.h>
 
+#include <3rd-party/IconFontCppHeaders/IconsFontAwesome5.hpp>
 #include <bloomCG/core/input.hpp>
 #include <cmath>
 #include <cstdint>

@@ -2,6 +2,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <3rd-party/IconFontCppHeaders/IconsFontAwesome5.hpp>
 #include <bloomCG/core/core.hpp>
 #include <bloomCG/core/input.hpp>
 #include <bloomCG/core/renderer.hpp>
@@ -121,6 +122,26 @@ int main(void) {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
+
+  // TODO: extract this to a utils...
+  const std::string cd = std::filesystem::current_path().string();
+  auto at = [cd](const std::string& path) { return cd + "/../../../../assets/fonts/" + path; };
+
+  ImFontConfig default_config;
+  default_config.SizePixels = 16;
+  default_config.PixelSnapH = true;
+  default_config.RasterizerMultiply = 1.0f;
+  auto again = at("Iosevka-Nerd-Font.ttf");
+  io.Fonts->AddFontFromFileTTF(again.c_str(), 16.0f, &default_config);
+
+  static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_16_FA, 0};
+  ImFontConfig icons_config;
+  icons_config.MergeMode = true;
+  icons_config.PixelSnapH = true;
+
+  auto fontFile = at("fa-solid-900.ttf");
+  io.Fonts->AddFontFromFileTTF(fontFile.c_str(), 16.0f, &icons_config, icons_ranges);
+
   (void)io;
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
   ImGui::StyleColorsDark();

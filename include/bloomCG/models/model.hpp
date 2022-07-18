@@ -14,20 +14,34 @@ namespace bloom {
 
   class Object : public Entity {
   public:
-    virtual glm::vec3 getAppliedRotation() = 0;
-    virtual glm::vec3 getAppliedScale() = 0;
-    virtual void setAppliedRotation(glm::vec3 rotation) = 0;
-    virtual void setAppliedScale(glm::vec3 scale) = 0;
+    enum class Shading { FLAT, GOURAUD, PHONG };
 
-    virtual glm::vec3 getColor() = 0;
-    virtual glm::vec3 getKa() = 0;
-    virtual glm::vec3 getKd() = 0;
-    virtual glm::vec3 getKs() = 0;
-    virtual float getShininess() = 0;
-    virtual void setKa(glm::vec3 ka) = 0;
-    virtual void setKd(glm::vec3 kd) = 0;
-    virtual void setKs(glm::vec3 ks) = 0;
-    virtual void setShininess(float shininess) = 0;
+    glm::vec3 m_objectKa, m_objectKd, m_objectKs;
+    float m_objectShininess;
+
+    glm::vec3 m_appliedRotation = glm::vec3(0.0f);
+    glm::vec3 m_appliedScale = glm::vec3(1.0f);
+
+    Shading m_shading = Shading::PHONG;
+
+    glm::vec3 getAppliedRotation();
+    glm::vec3 getAppliedScale();
+    void setAppliedRotation(glm::vec3 rotation);
+    void setAppliedScale(glm::vec3 scale);
+
+    glm::vec3 getColor();
+    glm::vec3 getKa();
+    glm::vec3 getKd();
+    glm::vec3 getKs();
+    float getShininess();
+    void setColor(glm::vec3 color);
+    void setKa(glm::vec3 ka);
+    void setKd(glm::vec3 kd);
+    void setKs(glm::vec3 ks);
+    void setShininess(float shininess);
+
+    Shading getShading();
+    void setShading(Shading shading);
 
     virtual void draw() = 0;
   };

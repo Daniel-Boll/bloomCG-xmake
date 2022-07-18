@@ -45,21 +45,19 @@ struct Light {
   float quadratic;
 };
 
-uniform vec3 uLightPosition;
 uniform vec3 uCameraPosition;
 uniform Material uMaterial;
 uniform Light uLight;
 uniform bool uUseLighting;
 
 void main() { 
-  // Check if uLightPosition was set
   if (uUseLighting) {
     // ==== Ambient Light ====
     vec3 ambient = uLight.ambient * uMaterial.ambient;
 
     // ==== Diffuse Light ====
     vec3 norm = normalize(v_normal);
-    vec3 lightDirection = normalize(uLightPosition - v_position);
+    vec3 lightDirection = normalize(uLight.position - v_position);
     
     float diff = max(dot(norm, lightDirection), 0.0);
     vec3 diffuse = uLight.diffuse * (diff * uMaterial.diffuse);

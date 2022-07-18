@@ -32,11 +32,6 @@ namespace bloom {
     std::vector<uint32_t> m_indices;
 
     std::vector<float> m_vertexData;  // Combination of (position, normal)
-    glm::vec3 m_objectKa, m_objectKd, m_objectKs;
-    float m_objectShininess;
-
-    glm::vec3 m_appliedRotation = glm::vec3(0.0f);
-    glm::vec3 m_appliedScale = glm::vec3(1.0f);
 
   public:
     Sphere(glm::vec3 center, glm::vec3 color = glm::vec3{1., .0, .0}, float radius = 0.2,
