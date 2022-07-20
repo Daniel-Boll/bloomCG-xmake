@@ -34,6 +34,14 @@ namespace bloom {
       if (bloom::Input::isKeyPressed(GLFW_KEY_D)) {
         m_cameraPosition += glm::normalize(glm::cross(m_cameraFront, m_cameraUp)) * cameraSpeed;
       }
+
+      if (bloom::Input::isKeyPressed(GLFW_KEY_SPACE)) {
+        m_cameraPosition += glm::vec3(0.0f, cameraSpeed, 0.0f);
+      }
+
+      if (bloom::Input::isKeyPressed(GLFW_KEY_LEFT_SHIFT)) {
+        m_cameraPosition -= glm::vec3(0.0f, cameraSpeed, 0.0f);
+      }
     }
 
     if (m_mouseMovementEnabled) {

@@ -33,7 +33,7 @@ struct Material {
   float shininess;
 };
 
-struct Light {
+struct PointLight {
   vec3 position;
 
   vec3 ambient;
@@ -47,37 +47,55 @@ struct Light {
 
 uniform vec3 uCameraPosition;
 uniform Material uMaterial;
-uniform Light uLight;
 uniform bool uUseLighting;
+
+#define MAX_POINT_LIGHTS 8
+uniform PointLight uPointLights[MAX_POINT_LIGHTS];
+
+uniform int uPointLightCount;
+
+vec3 calculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, vec3 viewDirection) {
+  // ==== Ambient Light ====
+  vec3 ambient = light.ambient * uMaterial.ambient;
+
+  vec3 lightDirection = normalize(light.position - fragmentPosition);
+  
+  float diff = max(dot(normal, lightDirection), 0.0);
+  vec3 diffuse = light.diffuse * (diff * uMaterial.diffuse);
+
+  // ==== Specular Light ====
+  vec3 reflectDirection = reflect(-lightDirection, normal);
+
+  float spec = pow(max(dot(viewDirection, reflectDirection), 0.0), uMaterial.shininess);
+  vec3 specular = light.specular * (spec * uMaterial.specular);
+
+  // ==== Attenuation ====
+  float distance = length(light.position - v_position);
+  float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+
+  ambient *= attenuation;
+  diffuse *= attenuation;
+  specular *= attenuation;
+
+  return (ambient + diffuse + specular);
+}
 
 void main() { 
   if (uUseLighting) {
-    // ==== Ambient Light ====
-    vec3 ambient = uLight.ambient * uMaterial.ambient;
 
-    // ==== Diffuse Light ====
-    vec3 norm = normalize(v_normal);
-    vec3 lightDirection = normalize(uLight.position - v_position);
-    
-    float diff = max(dot(norm, lightDirection), 0.0);
-    vec3 diffuse = uLight.diffuse * (diff * uMaterial.diffuse);
-
-    // ==== Specular Light ====
+    vec3 normal = normalize(v_normal);
     vec3 viewDirection = normalize(uCameraPosition - v_position);
-    vec3 reflectDirection = reflect(-lightDirection, norm);
+    vec3 result = vec3(0.0);
 
-    float spec = pow(max(dot(viewDirection, reflectDirection), 0.0), uMaterial.shininess);
-    vec3 specular = uLight.specular * (spec * uMaterial.specular);
+    // Phase 1. Calculate the directional light (only ambient and diffuse)
 
-    // ==== Attenuation ====
-    float distance = length(uLight.position - v_position);
-    float attenuation = 1.0 / (uLight.constant + uLight.linear * distance + uLight.quadratic * (distance * distance));
+    // Phase 2. Calculate the point lights (diffuse and specular) (8 max) (remove ambient after)
+    for (int i = 0; i < uPointLightCount; i++) {
+      result += calculatePointLight(uPointLights[i], normal, v_position, viewDirection);
+    }
 
-    ambient *= attenuation;
-    diffuse *= attenuation;
-    specular *= attenuation;
+    // Phase 3. Spot lights
 
-    vec3 result = (ambient + diffuse + specular);
     color = vec4(result, 1.0);
   } else {
     /* color = vec4(uMaterial.ambient, 1.0); */

@@ -19,6 +19,7 @@ namespace bloom {
     glm::vec3 m_objectKa, m_objectKd, m_objectKs;
     float m_objectShininess;
 
+    glm::vec3 m_appliedTransformation = glm::vec3(0.0f);
     glm::vec3 m_appliedRotation = glm::vec3(0.0f);
     glm::vec3 m_appliedScale = glm::vec3(1.0f);
 
@@ -26,8 +27,10 @@ namespace bloom {
 
     glm::vec3 getAppliedRotation();
     glm::vec3 getAppliedScale();
+    glm::vec3 getAppliedTransformation();
     void setAppliedRotation(glm::vec3 rotation);
     void setAppliedScale(glm::vec3 scale);
+    void setAppliedTransformation(glm::vec3 transformation);
 
     glm::vec3 getColor();
     glm::vec3 getKa();

@@ -17,10 +17,15 @@ namespace bloom {
   glm::vec3 Object::getKd() { return m_objectKd; }
   glm::vec3 Object::getKs() { return m_objectKs; }
   float Object::getShininess() { return m_objectShininess; }
+
   glm::vec3 Object::getAppliedRotation() { return m_appliedRotation; }
   glm::vec3 Object::getAppliedScale() { return m_appliedScale; }
+  glm::vec3 Object::getAppliedTransformation() { return m_appliedTransformation; }
   void Object::setAppliedRotation(glm::vec3 rotation) { m_appliedRotation = rotation; }
   void Object::setAppliedScale(glm::vec3 scale) { m_appliedScale = scale; }
+  void Object::setAppliedTransformation(glm::vec3 transformation) {
+    m_appliedTransformation = transformation;
+  }
 
   Object::Shading Object::getShading() { return m_shading; }
   void Object::setShading(Shading shading) { m_shading = shading; }

@@ -1,16 +1,15 @@
 ## Crítico
 
-- <Space> para subir apenas em Y
-- <Shift> para descer apenas em Y
+- Adicionar sombreamento constante
+- Separar iluminação ambiente de intensidade.
 
-- Criar objeto com posição inicial diferente buga gizmo.
-- Luzes com posições zoadas.
-- Atenuância não pegando ao movimentar as luzes, apenas o objeto.
-- Múltiplas luzes
+- Ambiente 100
+- Pontual 150
 
 ## Possíveis melhorias
 
-- Adicionar sombreamento
+- (todo) Escalar window +1 e -1.
+- Add blinn-phong (easy)
 
 ## Requisitos
 

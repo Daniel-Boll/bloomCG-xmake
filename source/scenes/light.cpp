@@ -1,117 +1,15 @@
-#include <fmt/core.h>
-#include <fmt/ostream.h>
-#include <imgui.h>
-#include <imgui_internal.h>
-
 #include <bloomCG/core/camera.hpp>
 #include <bloomCG/core/core.hpp>
 #include <bloomCG/core/renderer.hpp>
 #include <bloomCG/scenes/light.hpp>
+#include <bloomCG/structures/hierarchy.hpp>
 #include <bloomCG/structures/shader.hpp>
-#include <cstddef>
-
-#include "ImGuizmo.h"
-
-// Helper to display a little (?) mark which shows a tooltip when hovered.
-// In your own code you may want to display an actual icon if you are using a merged icon fonts (see
-// docs/FONTS.md)
-static void HelpMarker(const char* desc) {
-  ImGui::TextDisabled("(?)");
-  if (ImGui::IsItemHovered()) {
-    ImGui::BeginTooltip();
-    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-    ImGui::TextUnformatted(desc);
-    ImGui::PopTextWrapPos();
-    ImGui::EndTooltip();
-  }
-}
-
-static void TextCentered(std::string text) {
-  auto windowWidth = ImGui::GetWindowSize().x;
-  auto textWidth = ImGui::CalcTextSize(text.c_str()).x;
-
-  // Bold the text if it is the currently selected item
-  ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-
-  ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
-  ImGui::Text("%s", text.c_str());
-
-  ImGui::PopStyleColor(1);
-}
-
-// Each key represents the type of the constructor of the class
-enum class ObjectType { CUBE, SPHERE, LIGHT, CAMERA };
-struct Objects {
-  ObjectType type;
-  std::string name;
-  int32_t index;
-
-  union Object {
-    bloom::Sphere* sphere;
-    bloom::Cube* cube;
-    bloom::Light* light;
-    bloom::Camera* camera;
-  } object;
-
-  bloom::Entity* get() {
-    // Check for the current type of the struct, then return the object
-    switch (type) {
-      case ObjectType::CUBE:
-        return object.cube;
-      case ObjectType::SPHERE:
-        return object.sphere;
-      case ObjectType::LIGHT:
-        return object.light;
-      case ObjectType::CAMERA:
-        return object.camera;
-    }
-  }
-};
-
-std::ostream& operator<<(std::ostream& os, const Objects& object) {
-  os << "Object: " << object.name << " (" << object.index << ")";
-  return os;
-}
-
-template <typename Base, typename T> inline bool instanceof (const T* ptr) {
-  return dynamic_cast<const Base*>(ptr) != nullptr;
-}
+#include <bloomCG/utils/imgui.hpp>
+#include <bloomCG/utils/polymorphism.hpp>
 
 namespace bloom {
   namespace scene {
-    // Hierarchy
-    std::vector<Objects> hierarchyObjects;
     int8_t selected = -1;
-
-    // Get reference of the object by type
-    template <ObjectType T> Objects& getObjectByTypeRef(int32_t index) {
-      // Retrieve the index of the object in the hierarchy that matches the type and index
-      std::for_each(hierarchyObjects.begin(), hierarchyObjects.end(), [&index](Objects& object) {
-        if (object.type == T && object.index == index) {
-          index = object.index;
-        }
-      });
-
-      // Return the object
-      return hierarchyObjects[index];
-    }
-
-    // Get all objects of the hierarchy by type, if index is informed, it will get the object at the
-    // index of the vector
-    template <ObjectType T> std::vector<Objects> getObjectByType() {
-      std::vector<Objects> objects;
-      std::copy_if(hierarchyObjects.begin(), hierarchyObjects.end(), std::back_inserter(objects),
-                   [](const Objects& obj) { return obj.type == T; });
-      return objects;
-    }
-
-    template <ObjectType T> Objects getObjectByType(int32_t index) {
-      std::vector<Objects> objects = getObjectByType<T>();
-
-      if (objects.size() == 0) return Objects{};
-
-      return objects[index];
-    }
 
     bool m_wireframe = false;
     bool m_depthBuffer = true;
@@ -128,6 +26,8 @@ namespace bloom {
     /**/ glm::vec3 resultPositionSphere;                /**/
     /**/ glm::vec3 resultColorSphere;                   /**/
     /**/ float resultRadiusSphere;                      /**/
+    /**/ int resultStackSphere;                         /**/
+    /**/ int resultSectorSphere;                        /**/
     /*                                                  */
     /*                      CUBE                        */
     /**/ bool m_modalCube = false;                      /**/
@@ -149,6 +49,10 @@ namespace bloom {
 
     // ==== Shaders ====
     ShaderMap* shaders;
+
+    // ==== Scene controllers ====
+    bool m_canMove = true;
+    bool m_isPaused = false;
 
     Light::Light() : m_translation(0.0f, 0.0f, 0.0f) {
       GLCall(glad_glEnable(GL_BLEND));
@@ -199,30 +103,41 @@ namespace bloom {
 
       // =================== Lights in the scene ================
       glm::vec3 lightPositions[] = {
-          glm::vec3(0.5f, 2.1f, -1.0f),
-          // glm::vec3(1.5f, 3.1f, -2.0f),
+          glm::vec3(0.0f, 0.0f, 0.0f),
+          glm::vec3(1.5f, 3.1f, -2.0f),
       };
-      m_translation = glm::vec3(0.5f, 2.1f, -1.f);
+      m_translation = glm::vec3(0.0f, 0.0f, 0.f);
 
       int lightCount = sizeof(lightPositions) / sizeof(lightPositions[0]);
-      for (int i = 0; i < lightCount; i++)
-        hierarchyObjects.emplace_back(Objects{ObjectType::LIGHT,
-                                              fmt::format("Light_{}", i),
-                                              i,
-                                              {.light = new bloom::Light(lightPositions[i])}});
+      for (int i = 0; i < lightCount; i++) {
+        auto light = (bloom::Object*)new bloom::Light(lightPositions[i]);
+        light->setKa(glm::vec3(0.2));
+        light->setKd(glm::vec3(0.2));
+        light->setKs(glm::vec3(0.8));
+
+        hierarchyObjects.emplace_back(Objects{
+            ObjectType::LIGHT, fmt::format("Light_{}", i), i, {.light = (bloom::Light*)light}});
+      }
       // ==========================================================
     }
 
     void Light::onUpdate(const float deltaTime) {
+      if (m_isPaused) return;
+
       cameraObject->update(deltaTime);
       // Update light position based on m_translation
-      ((bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get())->setPosition(m_translation);
+      // ((bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get())
+      //     ->setAppliedTransformation(m_translation);
+      // ((bloom::Light*)getObjectByType<ObjectType::LIGHT>(1).get())
+      //     ->setAppliedTransformation(-m_translation);
     }
 
     void Light::onRender(const float deltaTime) {
       GLCall(glad_glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
       GLCall(glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
       GLCall(m_depthBuffer ? glad_glEnable(GL_DEPTH_TEST) : glad_glDisable(GL_DEPTH_TEST));
+
+      if (m_isPaused) return;
 
       auto lightShader = shaders->get<ShaderType::Light, LightModel::Phong>();
       lightShader->bind()
@@ -231,9 +146,9 @@ namespace bloom {
       lightShader->unbind();
 
       // Move the light in a orbit around the center
-      m_translation.x = sin(glfwGetTime()) * 5.0f;
-      m_translation.z = cos(glfwGetTime()) * 5.0f;
-      m_translation.y = sin(glfwGetTime()) * 5.0f;
+      m_translation.x = sin(glfwGetTime() * 3) * 3.0f;
+      m_translation.z = cos(glfwGetTime() * 3) * 3.0f;
+      m_translation.y = sin(glfwGetTime() * 3) * 3.0f;
 
       if (m_wireframe) {
         GLCall(glad_glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
@@ -250,8 +165,12 @@ namespace bloom {
             glm::vec3 position = _object->getPosition();
 
             glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, position);
 
+            // Translation
+            auto appliedTranslation = _object->getAppliedTransformation();
+            model = glm::translate(model, appliedTranslation);
+
+            // Rotation
             auto appliedRotation = _object->getAppliedRotation();
             model
                 = glm::rotate(model, glm::radians(appliedRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -260,6 +179,7 @@ namespace bloom {
             model
                 = glm::rotate(model, glm::radians(appliedRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
+            // Scale
             auto appliedScale = _object->getAppliedScale();
             model = glm::scale(model, appliedScale);
 
@@ -280,23 +200,33 @@ namespace bloom {
             shader->bind()
                 ->setUniformMat4f("uView", cameraObject->getViewMatrix())
                 ->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix())
+                ->setUniformMat4f("uModel", model)
                 ->setUniform3f("uCameraPosition", cameraObject->getPosition())
-                ->setUniform3f("uLight.ambient", m_lightAmbient)
-                ->setUniform3f("uLight.diffuse", m_lightDiffuse)
-                ->setUniform3f("uLight.specular", m_lightSpecular)
                 ->setUniform3f("uMaterial.ambient", _object->getKa())
                 ->setUniform3f("uMaterial.diffuse", _object->getKd())
                 ->setUniform3f("uMaterial.specular", _object->getKs())
                 ->setUniform1f("uMaterial.shininess", _object->getShininess())
-                ->setUniform1f("uLight.constant", 1.0f)
-                ->setUniform1f("uLight.linear", .09f)
-                ->setUniform1f("uLight.quadratic", .032f)
-                ->setUniform3f("uObjectColor", glm::vec3(1.0f, 0.0f, 0.0f))  // Gouraud's only
-                ->setUniformMat4f("uModel", model);
+                ->setUniform3f("uObjectColor", glm::vec3(1.0f, 0.0f, 0.0f));  // Gouraud's only
 
-            auto light = (bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get();
-            if (light != nullptr) shader->setUniform3f("uLight.position", light->getPosition());
-            shader->setUniform1i("uUseLighting", light ? 1 : 0);
+            auto lights = getObjectByType<ObjectType::LIGHT>();
+            if (!lights.empty()) {
+              for (auto& light : lights) {
+                std::string prefix = fmt::format("uPointLights[{}].", light.index);
+                auto _light = (bloom::Object*)light.get();
+
+                shader->setUniform3f(prefix + "position", _light->getAppliedTransformation())
+                    ->setUniform3f(prefix + "ambient", _light->getKa())
+                    ->setUniform3f(prefix + "diffuse", _light->getKd())
+                    ->setUniform3f(prefix + "specular", _light->getKs())
+                    ->setUniform1f(prefix + "constant", 1.0f)
+                    ->setUniform1f(prefix + "linear", .09f)
+                    ->setUniform1f(prefix + "quadratic", .032f);
+              }
+            }
+
+            // Set light's constraints
+            shader->setUniform1i("uUseLighting", !lights.empty() ? 1 : 0);
+            shader->setUniform1i("uPointLightCount", lights.size());
 
             _object->draw();
             shader->unbind();
@@ -312,8 +242,13 @@ namespace bloom {
             // position.z += 1.0f;
             // 0.5f, 2.1f, -1.0f
 
-            model = glm::translate(model, position);
+            // Translation
+            auto appliedTranslation = light->getAppliedTransformation();
+            model = glm::translate(model, appliedTranslation);
+
             lightShader->bind()
+                ->setUniformMat4f("uView", cameraObject->getViewMatrix())
+                ->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix())
                 ->setUniformMat4f("uModel", model)
                 ->setUniform4f("uColor", glm::vec4{1});
             light->draw();
@@ -460,6 +395,30 @@ namespace bloom {
           break;
         }
         case ObjectType::CAMERA: {
+          if (ImGui::CollapsingHeader("Camera configuration")) {
+            switch (cameraObject->getCameraType()) {
+              case bloom::CameraType::PERSPECTIVE: {
+                if (ImGui::Button("Change to parallel")) {
+                  cameraObject->changeCameraType(CameraType::AXONOMETRIC, new double[]{});
+                }
+                break;
+              }
+              case bloom::CameraType::AXONOMETRIC: {
+                if (ImGui::Button("Change to perspective")) {
+                  int width = 1920 / 2, height = 1080 / 2;
+
+                  const double fov = 45.0f;
+                  const double aspect = (float)width / (float)height;
+                  const double near = 0.1f;
+                  const double far = 100.0f;
+
+                  cameraObject->changeCameraType(CameraType::PERSPECTIVE,
+                                                 new double[]{fov, aspect, near, far});
+                }
+                break;
+              }
+            }
+          }
           break;
         }
       }
@@ -472,14 +431,18 @@ namespace bloom {
 
       if (ImGui::BeginPopupContextWindow()) {
         if (ImGui::BeginMenu(ICON_FA_PLUS_CIRCLE " Create element")) {
-          if (ImGui::MenuItem(ICON_FA_CIRCLE " Sphere")) m_modalSphere = true;
+          ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), ICON_FA_CIRCLE);
+          ImGui::SameLine();
+          if (ImGui::MenuItem("Sphere")) m_modalSphere = true;
 
-          if (ImGui::MenuItem(ICON_FA_SQUARE " Cube")) m_modalCube = true;
+          ImGui::TextColored(ImVec4(0.2f, 0.7f, 1.0f, 1.0f), ICON_FA_CUBE);
+          ImGui::SameLine();
+          if (ImGui::MenuItem("Cube")) m_modalCube = true;
 
           // Apply yellow text color for the next line
           ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), ICON_FA_LIGHTBULB);
           ImGui::SameLine();
-          if (ImGui::MenuItem(" Light")) {
+          if (ImGui::MenuItem("Light")) {
             // hierarchyObjects.emplace_back(
             //     Objects{ObjectType::LIGHT, "Light", (int32_t)m_lights.size()});
           }
@@ -535,8 +498,7 @@ namespace bloom {
       ImGui::SameLine();
       HelpMarker(
           "\"Hierarchy\" is a list of all the objects in the scene. Press Right click to add a "
-          "new "
-          "object\n");
+          "new object\n");
       ImGui::Separator();
 
       {
@@ -566,13 +528,16 @@ namespace bloom {
 
       if (!m_editingSphere) {
         std::string resultName = name ? *name : sphereName;
-        // std::string to char*
         namePtrSphere = new char[resultName.size() + 1];
         std::copy(resultName.begin(), resultName.end(), namePtrSphere);
-        // Create buffer
+
         resultPositionSphere = position ? *position : glm::vec3(0.0f);
         resultRadiusSphere = radius ? *radius : 1.0f;
-        resultColorCube = glm::vec3(1.0f);
+        resultColorCube = glm::vec3(1.0f, 1.0f, 1.0f);
+
+        resultStackSphere = 30;
+        resultSectorSphere = 30;
+
         m_editingSphere = true;
       }
 
@@ -585,19 +550,28 @@ namespace bloom {
       ImGui::InputFloat("Radius", &resultRadiusSphere);
       ImGui::Spacing();
 
+      ImGui::InputInt("Sector", &resultSectorSphere);
+      ImGui::InputInt("Stack", &resultStackSphere);
+      ImGui::Spacing();
+
       ImGui::ColorEdit3("Color", glm::value_ptr(resultColorSphere));
+      ImGui::SameLine();
+      HelpMarker(
+          "\"Color\" this parameter is deceiving, the color of the sphere isn't real"
+          " it's simpled mapped to Ka and Kd coeficientes of the Material.\n");
       ImGui::Spacing();
 
       if (ImGui::Button("OK", ImVec2(120, 0))) {
         ImGui::CloseCurrentPopup();
         m_editingSphere = false;
 
-        hierarchyObjects.emplace_back(
-            Objects{ObjectType::SPHERE,
-                    namePtrSphere,
-                    (int32_t)getObjectByType<ObjectType::SPHERE>().size(),
-                    {.sphere = new bloom::Sphere(resultPositionSphere, resultColorSphere,
-                                                 resultRadiusSphere, 30, 30)}});
+        hierarchyObjects.emplace_back(Objects{
+            ObjectType::SPHERE,
+            namePtrSphere,
+            (int32_t)getObjectByType<ObjectType::SPHERE>().size(),
+            {.sphere
+             = new bloom::Sphere(resultPositionSphere, resultColorSphere, resultRadiusSphere,
+                                 resultSectorSphere, resultStackSphere)}});
       }
       ImGui::SetItemDefaultFocus();
       ImGui::SameLine();
@@ -635,6 +609,10 @@ namespace bloom {
       ImGui::InputFloat("Side", &resultSideCube);
       ImGui::Spacing();
 
+      HelpMarker(
+          "\"Color\" is just a abstraction. \nIn reality what is happening is that the color that "
+          "you are selecting is being set as the ambient and diffuse coeficients of the "
+          "material\n");
       ImGui::ColorEdit3("Color", glm::value_ptr(resultColorCube));
       ImGui::Spacing();
 
@@ -659,13 +637,11 @@ namespace bloom {
     }
 
     void Light::enableGuizmo() {
-      // // TODO: add for every object. (only show to the selected one)
-      // // TODO: add rotation on R
-      // // TODO: add base ImGuizmo for coordinates
+      // ImGui::Begin("Guizmo");
       if (selected == -1) return;
 
-      ImGuizmo::SetOrthographic(false);
       ImGuizmo::SetDrawlist(bloom::Renderer::getViewportDrawList());
+      ImGuizmo::SetOrthographic(false);
 
       float windowPosX = bloom::Renderer::getViewportX();
       float windowPosY = bloom::Renderer::getViewportY();
@@ -676,9 +652,9 @@ namespace bloom {
       ImGuizmo::SetRect(windowPosX, windowPosY, windowWidth, windowHeight);
 
       glm::mat4 model = glm::mat4(1.0f);
-      auto* selectedModel = hierarchyObjects[selected].get();
+      auto selectedModel = (bloom::Object*)hierarchyObjects[selected].get();
 
-      model = glm::translate(model, selectedModel->getPosition());
+      model = glm::translate(model, selectedModel->getAppliedTransformation());
 
       ImGuizmo::Manipulate(glm::value_ptr(cameraObject->getViewMatrix()),
                            glm::value_ptr(cameraObject->getProjectionMatrix()),
@@ -686,39 +662,36 @@ namespace bloom {
 
       if (ImGuizmo::IsUsing()) {
         glm::vec3 position = glm::vec3(model[3]);
-        selectedModel->setPosition(position);
+        // selectedModel->setPosition(position);
+        ((bloom::Object*)selectedModel)->setAppliedTransformation(position);
       }
+      // ImGui::End();
+    }
+
+    void Light::guizmoController() {
+      // Gray background
+      ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1.00f, 1.00f, 0.13f, 1.00f));
+      ImGui::Begin("Dear");
+      {
+        // Center buttons in the window
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2.0f);
+        bool decoy = false;
+
+        selectableButton(ICON_FA_ARROWS_ALT, &m_canMove);
+        selectableButton(m_isPaused ? ICON_FA_PLAY : ICON_FA_PAUSE, &m_isPaused);
+        selectableButton(ICON_FA_SEARCH_PLUS, &decoy);
+        selectableButton(ICON_FA_SEARCH_MINUS, &decoy);
+        selectableButton(ICON_FA_PAINT_ROLLER, &decoy);
+      }
+      ImGui::End();
+      ImGui::PopStyleColor(1);
     }
 
     void Light::onImGuiRender() {
       hierarchy();
       inspector();
-      enableGuizmo();
-
-      if (ImGui::CollapsingHeader("Camera configuration")) {
-        switch (cameraObject->getCameraType()) {
-          case bloom::CameraType::PERSPECTIVE: {
-            if (ImGui::Button("Change to parallel")) {
-              cameraObject->changeCameraType(CameraType::AXONOMETRIC, new double[]{});
-            }
-            break;
-          }
-          case bloom::CameraType::AXONOMETRIC: {
-            if (ImGui::Button("Change to perspective")) {
-              int width = 1920 / 2, height = 1080 / 2;
-
-              const double fov = 45.0f;
-              const double aspect = (float)width / (float)height;
-              const double near = 0.1f;
-              const double far = 100.0f;
-
-              cameraObject->changeCameraType(CameraType::PERSPECTIVE,
-                                             new double[]{fov, aspect, near, far});
-            }
-            break;
-          }
-        }
-      }
+      if (m_canMove) enableGuizmo();
+      guizmoController();
 
       ImGui::ShowDemoWindow();
 

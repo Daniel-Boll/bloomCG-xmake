@@ -11,6 +11,7 @@ namespace bloom {
     m_objectShininess = 32;
     m_objectKa = color;
     m_objectKd = color;
+    m_appliedTransformation = center;
     set(m_radius, sectorCount, stackCount);
   }
 
@@ -94,9 +95,9 @@ namespace bloom {
       for (uint16_t j = 0; j <= m_sectorCount; j++) {
         float sectorAngle = j * sectorStep;
 
-        float x = xy * cos(sectorAngle) + m_center.x;
-        float y = xy * sin(sectorAngle) + m_center.y;
-        float z = zx + m_center.z;
+        float x = xy * cos(sectorAngle);
+        float y = xy * sin(sectorAngle);
+        float z = zx;
 
         tmpVertices.push_back({x, y, z, x * lengthInverse, y * lengthInverse, z * lengthInverse});
       }
@@ -191,10 +192,10 @@ namespace bloom {
     m_indices.emplace_back(c);
   }
 
-  glm::vec3 Sphere::getPosition() { return m_center; }
+  glm::vec3 Sphere::getPosition() { return m_appliedTransformation; }
 
   void Sphere::setPosition(glm::vec3 position) {
-    m_center = position;
+    m_appliedTransformation = position;
     buildVertices();
   }
 
