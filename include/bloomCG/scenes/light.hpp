@@ -54,6 +54,7 @@ namespace bloom {
                      float *radius = nullptr);
       void addCube(std::string *name = nullptr, glm::vec3 *position = nullptr,
                    float *side = nullptr);
+      void addLight(std::string *name = nullptr, glm::vec3 *position = nullptr);
       void enableGuizmo();
       void guizmoController();
     };

@@ -42,6 +42,13 @@ namespace bloom {
     /**/ glm::vec3 resultColorCube;                     /**/
     /**/ float resultSideCube;                          /**/
     /*                                                  */
+    /*                      LIGHT                       */
+    /**/ bool m_modalLight = false;                      /**/
+    /**/ bool m_editingLight = false;                    /**/
+    /**/ char* namePtrLight;                             /**/
+    /**/ std::string errorMessageLight = "";             /**/
+    /**/ glm::vec3 resultPositionLight;                  /**/
+    /**/ glm::vec3 resultIntensityLight;                 /**/
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     // clang-format on
 
@@ -123,7 +130,7 @@ namespace bloom {
       for (int i = 0; i < lightCount; i++) {
         hierarchyObjects.emplace_back(
             Objects{ObjectType::POINT_LIGHT,
-                    fmt::format("PointLight_{}", i),
+                    fmt::format("Point Light_{}", i),
                     i,
                     {.pointLight = new bloom::PointLight(lightPositions[i])}});
       }
@@ -272,6 +279,7 @@ namespace bloom {
             break;
           }
           case ObjectType::CAMERA:
+          case ObjectType::AMBIENT_LIGHT:
             break;
         }
       }
@@ -503,19 +511,18 @@ namespace bloom {
         if (ImGui::BeginMenu(ICON_FA_PLUS_CIRCLE " Create element")) {
           ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), ICON_FA_CIRCLE);
           ImGui::SameLine();
+
           if (ImGui::MenuItem("Sphere")) m_modalSphere = true;
 
           ImGui::TextColored(ImVec4(0.2f, 0.7f, 1.0f, 1.0f), ICON_FA_CUBE);
           ImGui::SameLine();
+
           if (ImGui::MenuItem("Cube")) m_modalCube = true;
 
-          // Apply yellow text color for the next line
           ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), ICON_FA_LIGHTBULB);
           ImGui::SameLine();
-          if (ImGui::MenuItem("Light")) {
-            // hierarchyObjects.emplace_back(
-            //     Objects{ObjectType::LIGHT, "Light", (int32_t)m_lights.size()});
-          }
+
+          if (ImGui::MenuItem(" Light")) m_modalLight = true;
 
           ImGui::EndMenu();
         }
@@ -551,6 +558,7 @@ namespace bloom {
       {  // Modals
         if (m_modalSphere == true) ImGui::OpenPopup("add_sphere");
         if (m_modalCube == true) ImGui::OpenPopup("add_cube");
+        if (m_modalLight == true) ImGui::OpenPopup("add_light");
 
         // Always center this window when appearing
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -564,6 +572,11 @@ namespace bloom {
         if (ImGui::BeginPopupModal("add_cube", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
           addCube();
           m_modalCube = false;
+        }
+
+        if (ImGui::BeginPopupModal("add_light", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+          addLight();
+          m_modalLight = false;
         }
       }
 
@@ -738,6 +751,66 @@ namespace bloom {
       ImGui::EndPopup();
 
       m_modalCube = false;
+    }
+
+    void Light::addLight(std::string* name, glm::vec3* position) {
+      const auto size = getObjectByType<ObjectType::POINT_LIGHT>().size();
+      const std::string repeated = fmt::format("({})", size);
+      const std::string cubeName = fmt::format("Point Light_{}", size >= 1 ? repeated : "");
+
+      if (!m_editingLight) {
+        std::string resultName = name ? *name : cubeName;
+        namePtrLight = new char[resultName.size() + (size >= 1)];
+        std::copy(resultName.begin(), resultName.end(), namePtrLight);
+
+        resultPositionLight = position ? *position : glm::vec3(0.0f);
+        resultIntensityLight = glm::vec3(1.0f, 1.0f, 1.0f);
+
+        m_editingLight = true;
+      }
+
+      if (!errorMessageLight.empty()) {
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "%s", errorMessageLight.c_str());
+      }
+
+      ImGui::InputText("Name", namePtrLight, 64);
+      ImGui::SameLine();
+      HelpMarker("The name of the cube *MUST* be unique.\n");
+      ImGui::Separator();
+
+      ImGui::InputFloat3("Position", glm::value_ptr(resultPositionLight));
+      ImGui::Separator();
+
+      ImGui::ColorEdit3("Intensity", glm::value_ptr(resultIntensityLight));
+      ImGui::Spacing();
+
+      if (ImGui::Button("OK", ImVec2(120, 0))) {
+        m_editingLight = false;
+
+        // Check if the name is unique
+        std::string name = namePtrLight;
+        if (std::any_of(hierarchyObjects.begin(), hierarchyObjects.end(),
+                        [name](const Objects& object) { return object.name == name; })) {
+          errorMessageLight = fmt::format("The name \"{}\" is already in use", name);
+          goto not_adding;
+        }
+
+        hierarchyObjects.emplace_back(Objects{
+            ObjectType::POINT_LIGHT,
+            namePtrLight,
+            (int32_t)getObjectByType<ObjectType::POINT_LIGHT>().size(),
+            {.pointLight = new bloom::PointLight(resultPositionLight, resultIntensityLight)}});
+        ImGui::CloseCurrentPopup();
+      }
+    not_adding:
+      ImGui::SetItemDefaultFocus();
+      ImGui::SameLine();
+      if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        ImGui::CloseCurrentPopup();
+      }
+      ImGui::EndPopup();
+
+      m_modalLight = false;
     }
 
     void Light::enableGuizmo() {

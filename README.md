@@ -1,13 +1,13 @@
 ## Crítico
 
-- Adicionar modal de adição de luz
-- Adicionar controladores de view up
 - Checkbox de controlar órbita de luzes
+- Adicionar controladores de view up
 - Adicionar sombreamento constante
 - Adicionar gizmo global de localização
 
 ## Possíveis melhorias
 
+- Adicionar cor de fundo conforme intensidade da luz ambiente
 - (todo) Escalar window +1 e -1.
 - Add blinn-phong (easy)
 
