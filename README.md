@@ -2,6 +2,7 @@
 
 - Checkbox de controlar órbita de luzes
 - Adicionar controladores de view up
+- Adicionar controladores de atenuação das luzes
 - Adicionar sombreamento constante
 - Adicionar gizmo global de localização
 
