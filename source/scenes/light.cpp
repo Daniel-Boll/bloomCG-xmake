@@ -795,6 +795,12 @@ namespace bloom {
           goto not_adding;
         }
 
+        // Check if there's less than 8 lights
+        if (getObjectByType<ObjectType::POINT_LIGHT>().size() >= 8) {
+          errorMessageLight = "There's already 8 lights";
+          goto not_adding;
+        }
+
         hierarchyObjects.emplace_back(Objects{
             ObjectType::POINT_LIGHT,
             namePtrLight,
