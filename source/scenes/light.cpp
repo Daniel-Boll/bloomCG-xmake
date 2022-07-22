@@ -9,6 +9,8 @@
 #include <bloomCG/utils/imgui.hpp>
 #include <bloomCG/utils/polymorphism.hpp>
 
+#include "imgui.h"
+
 namespace bloom {
   namespace scene {
     int8_t selected = -1;
@@ -137,10 +139,10 @@ namespace bloom {
 
       cameraObject->update(deltaTime);
       // Update light position based on m_translation
-      ((bloom::PointLight*)getObjectByType<ObjectType::POINT_LIGHT>(0).get())
-          ->setAppliedTransformation(m_translation);
-      ((bloom::PointLight*)getObjectByType<ObjectType::POINT_LIGHT>(1).get())
-          ->setAppliedTransformation(-m_translation);
+      // ((bloom::PointLight*)getObjectByType<ObjectType::POINT_LIGHT>(0).get())
+      //     ->setAppliedTransformation(m_translation);
+      // ((bloom::PointLight*)getObjectByType<ObjectType::POINT_LIGHT>(1).get())
+      //     ->setAppliedTransformation(-m_translation);
     }
 
     void Light::onRender(const float deltaTime) {
@@ -326,15 +328,17 @@ namespace bloom {
         ImGui::Separator();
         ImGui::Spacing();
         ImGui::Text("Material");
+        ImGui::SameLine();
+        HelpMarker("Ambient, diffuse and specular are reflection components of the material");
 
         glm::vec3 ka = object->getKa();
         glm::vec3 kd = object->getKd();
         glm::vec3 ks = object->getKs();
         int32_t shininess = object->getShininess();
 
-        ImGui::ColorEdit3("Light ambient", glm::value_ptr(ka));
-        ImGui::ColorEdit3("Light diffuse", glm::value_ptr(kd));
-        ImGui::ColorEdit3("Light specular", glm::value_ptr(ks));
+        ImGui::ColorEdit3("Ambient", glm::value_ptr(ka));
+        ImGui::ColorEdit3("Diffuse", glm::value_ptr(kd));
+        ImGui::ColorEdit3("Specular", glm::value_ptr(ks));
         ImGui::InputInt("Shininess", &shininess);
 
         if (ka != object->getKa() || kd != object->getKd() || ks != object->getKs()
@@ -361,7 +365,6 @@ namespace bloom {
                      IM_ARRAYSIZE(shadingNames));
 
         if (shading != (int32_t)object->getShading()) {
-          fmt::print("Shading changed to {}\n", shadingNames[shading]);
           object->setShading((bloom::Object::Shading)shading);
         }
       }
@@ -531,11 +534,14 @@ namespace bloom {
         if (ImGui::MenuItem(ICON_FA_PAINT_ROLLER
                             " Clear scene")) {  // Clear everything except for the camera
           auto camera = getObjectByType<ObjectType::CAMERA>(0);
+          auto ambienteLight = getObjectByType<ObjectType::AMBIENT_LIGHT>(0);
+          auto pointLight = getObjectByType<ObjectType::POINT_LIGHT>(0);
 
           std::vector<Objects>().swap(hierarchyObjects);
           hierarchyObjects.emplace_back(camera);
+          hierarchyObjects.emplace_back(ambienteLight);
+          hierarchyObjects.emplace_back(pointLight);
 
-          // cameraObject = (bloom::Camera*)getObjectByTypeRef<ObjectType::CAMERA>(0).get();
           ImGui::EndMenu();
         }
         ImGui::EndPopup();

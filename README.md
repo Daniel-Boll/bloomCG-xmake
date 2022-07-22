@@ -1,6 +1,5 @@
 ## Crítico
 
-- Arrumar o sistema de limpeza de cena
 - Adicionar modal de adição de luz
 - Adicionar controladores de view up
 - Checkbox de controlar órbita de luzes
