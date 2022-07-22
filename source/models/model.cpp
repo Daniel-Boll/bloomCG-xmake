@@ -1,8 +1,6 @@
 #include <bloomCG/models/model.hpp>
 
 namespace bloom {
-  Entity::Entity() {}
-
   void Object::setColor(glm::vec3 color) {
     m_objectKd = color;
     m_objectKa = color;

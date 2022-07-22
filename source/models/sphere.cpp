@@ -213,14 +213,9 @@ namespace bloom {
     m_indexBuffer->bind();
 
     GLCall(glDrawElements(GL_TRIANGLES, m_indexBuffer->getCount(), GL_UNSIGNED_INT, nullptr));
-    // fmt::print("Size: {}\n", m_positions.size());
-    // GLCall(glad_glDrawArrays(GL_TRIANGLES, 0, m_positions.size()));
 
     m_indexBuffer->unbind();
     m_vertexBuffer->unbind();
     m_vertexArray->unbind();
   }
-
-  // IndexBuffer* Sphere::m_indexBuffer = nullptr;
-  // VertexBufferLayout* Sphere::m_layoutBuffer = nullptr;
 }  // namespace bloom

@@ -1,10 +1,8 @@
 ## Crítico
 
-- Adicionar sombreamento constante
+- [~] Refazer matrix de perspectiva.
 - Separar iluminação ambiente de intensidade.
-
-- Ambiente 100
-- Pontual 150
+- Adicionar sombreamento constante
 
 ## Possíveis melhorias
 
@@ -27,9 +25,9 @@ cena, em um primeiro momento, pode ser realizada com parâmetros pré-definidos,
 - [X] 1. (completo)
 - [X] 2. Adicionar limpeza da cena (completo)
 - [X] 3. Adicionar transformações de rotação e escala. (completo)
-- [ ] 4. Adicionar possibilidade de informar P, view-up, tipo de projeção, distância aos planos Near, Far e plano de projeção.
+- [ ] 4. Adicionar possibilidade de informar P, view-up e plano de projeção.
   - [ ] 4.1 Adicionar sinalizadores
-- [ ] 5. Adicionar sombreamento constante e Gouraud. Bem como poder escolher qual método será aplicado.
+- [ ] 5. Adicionar sombreamento constante. Bem como poder escolher qual método será aplicado.
 - [X] 6. Poder definir Ka, Kd, Ks e n do objeto. (completo)
 - [X] 7. (completo)
 

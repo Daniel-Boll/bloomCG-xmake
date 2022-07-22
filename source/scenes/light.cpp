@@ -1,3 +1,5 @@
+#include "bloomCG/models/light.hpp"
+
 #include <bloomCG/core/camera.hpp>
 #include <bloomCG/core/core.hpp>
 #include <bloomCG/core/renderer.hpp>
@@ -89,6 +91,7 @@ namespace bloom {
                                                m_sectorCount, m_stackCount)}});
 
       // ================ Setting up Shaders ================
+      // TODO: extract this to utils.
       // Get current directory
       const std::string cd = std::filesystem::current_path().string();
       auto at
@@ -102,6 +105,11 @@ namespace bloom {
       // ==========================================================
 
       // =================== Lights in the scene ================
+      auto ambientLight = new bloom::AmbientLight(glm::vec3{0.2f, 0.2f, 0.2f});
+
+      hierarchyObjects.emplace_back(
+          Objects{ObjectType::AMBIENT_LIGHT, "Ambient Light", 0, {.ambientLight = ambientLight}});
+
       glm::vec3 lightPositions[] = {
           glm::vec3(0.0f, 0.0f, 0.0f),
           glm::vec3(1.5f, 3.1f, -2.0f),
@@ -110,15 +118,18 @@ namespace bloom {
 
       int lightCount = sizeof(lightPositions) / sizeof(lightPositions[0]);
       for (int i = 0; i < lightCount; i++) {
-        auto light = (bloom::Object*)new bloom::Light(lightPositions[i]);
-        light->setKa(glm::vec3(0.2));
-        light->setKd(glm::vec3(0.2));
-        light->setKs(glm::vec3(0.8));
-
-        hierarchyObjects.emplace_back(Objects{
-            ObjectType::LIGHT, fmt::format("Light_{}", i), i, {.light = (bloom::Light*)light}});
+        hierarchyObjects.emplace_back(
+            Objects{ObjectType::POINT_LIGHT,
+                    fmt::format("PointLight_{}", i),
+                    i,
+                    {.pointLight = new bloom::PointLight(lightPositions[i])}});
       }
       // ==========================================================
+
+      cameraObject->setViewportU(glm::vec2{-1, 1});
+      cameraObject->setViewportV(glm::vec2{-1, 1});
+      cameraObject->setWindowSizeX(glm::vec2{-1, 1});
+      cameraObject->setWindowSizeY(glm::vec2{-1, 1});
     }
 
     void Light::onUpdate(const float deltaTime) {
@@ -126,14 +137,16 @@ namespace bloom {
 
       cameraObject->update(deltaTime);
       // Update light position based on m_translation
-      // ((bloom::Light*)getObjectByType<ObjectType::LIGHT>(0).get())
-      //     ->setAppliedTransformation(m_translation);
-      // ((bloom::Light*)getObjectByType<ObjectType::LIGHT>(1).get())
-      //     ->setAppliedTransformation(-m_translation);
+      ((bloom::PointLight*)getObjectByType<ObjectType::POINT_LIGHT>(0).get())
+          ->setAppliedTransformation(m_translation);
+      ((bloom::PointLight*)getObjectByType<ObjectType::POINT_LIGHT>(1).get())
+          ->setAppliedTransformation(-m_translation);
     }
 
     void Light::onRender(const float deltaTime) {
-      GLCall(glad_glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
+      GLCall(glad_glClearColor(0.0, 0.0, 0.0, 1.0f));
+      // Add a sky color
+      // GLCall(glad_glClearColor(0.529f, 0.808f, 0.922f, 1.0f));
       GLCall(glad_glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
       GLCall(m_depthBuffer ? glad_glEnable(GL_DEPTH_TEST) : glad_glDisable(GL_DEPTH_TEST));
 
@@ -197,27 +210,30 @@ namespace bloom {
                 break;
             }
 
+            auto ambientLight
+                = (bloom::AmbientLight*)getObjectByType<ObjectType::AMBIENT_LIGHT>(0).get();
+
             shader->bind()
-                ->setUniformMat4f("uView", cameraObject->getViewMatrix())
+                ->setUniformMat4f("uW2V", cameraObject->getViewportMatrix())
                 ->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix())
+                ->setUniformMat4f("uView", cameraObject->getViewMatrix())
                 ->setUniformMat4f("uModel", model)
                 ->setUniform3f("uCameraPosition", cameraObject->getPosition())
                 ->setUniform3f("uMaterial.ambient", _object->getKa())
                 ->setUniform3f("uMaterial.diffuse", _object->getKd())
                 ->setUniform3f("uMaterial.specular", _object->getKs())
                 ->setUniform1f("uMaterial.shininess", _object->getShininess())
+                ->setUniform3f("uAmbientLight.intensity", ambientLight->getIntensity())
                 ->setUniform3f("uObjectColor", glm::vec3(1.0f, 0.0f, 0.0f));  // Gouraud's only
 
-            auto lights = getObjectByType<ObjectType::LIGHT>();
+            auto lights = getObjectByType<ObjectType::POINT_LIGHT>();
             if (!lights.empty()) {
               for (auto& light : lights) {
                 std::string prefix = fmt::format("uPointLights[{}].", light.index);
-                auto _light = (bloom::Object*)light.get();
+                auto _light = (bloom::PointLight*)light.get();
 
                 shader->setUniform3f(prefix + "position", _light->getAppliedTransformation())
-                    ->setUniform3f(prefix + "ambient", _light->getKa())
-                    ->setUniform3f(prefix + "diffuse", _light->getKd())
-                    ->setUniform3f(prefix + "specular", _light->getKs())
+                    ->setUniform3f(prefix + "intensity", _light->getIntensity())
                     ->setUniform1f(prefix + "constant", 1.0f)
                     ->setUniform1f(prefix + "linear", .09f)
                     ->setUniform1f(prefix + "quadratic", .032f);
@@ -232,15 +248,10 @@ namespace bloom {
             shader->unbind();
             break;
           }
-          case ObjectType::LIGHT: {
-            auto light = (bloom::Light*)object.get();
+          case ObjectType::POINT_LIGHT: {
+            auto light = (bloom::PointLight*)object.get();
             glm::vec3 position = object.get()->getPosition();
             glm::mat4 model = glm::mat4(1.0f);
-            // reduce 1 of each coordinate of the position
-            // position.x -= .5f;
-            // position.y -= 2.1f;
-            // position.z += 1.0f;
-            // 0.5f, 2.1f, -1.0f
 
             // Translation
             auto appliedTranslation = light->getAppliedTransformation();
@@ -249,6 +260,7 @@ namespace bloom {
             lightShader->bind()
                 ->setUniformMat4f("uView", cameraObject->getViewMatrix())
                 ->setUniformMat4f("uProjection", cameraObject->getProjectionMatrix())
+                ->setUniformMat4f("uW2V", cameraObject->getViewportMatrix())
                 ->setUniformMat4f("uModel", model)
                 ->setUniform4f("uColor", glm::vec4{1});
             light->draw();
@@ -275,13 +287,16 @@ namespace bloom {
 
       TextCentered(currentSelected.name);
 
-      ImGui::Separator();
-      ImGui::Spacing();
-      ImGui::Text("Transform");
-
       auto object = (bloom::Object*)currentSelected.get();
       {  // Transform
+
+        if (instanceof <bloom::AmbientLight>(currentSelected.get())) goto common_end;
+
         glm::vec3 position = object->getPosition();
+
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Text("Transform");
 
         ImGui::SliderFloat3("Position", glm::value_ptr(position), -100, 100);
 
@@ -294,6 +309,8 @@ namespace bloom {
         glm::vec3 appliedRotation = object->getAppliedRotation();
         glm::vec3 appliedScale = object->getAppliedScale();
 
+        if (! instanceof <bloom::Object>(currentSelected.get())) goto common_end;
+
         ImGui::SliderFloat3("Rotation", glm::value_ptr(appliedRotation), 0, 360.0f);
         ImGui::SliderFloat3("Scale", glm::value_ptr(appliedScale), 0, 10.0f);
 
@@ -304,7 +321,7 @@ namespace bloom {
           object->setAppliedScale(glm::vec3(appliedScale));
         }
 
-        if (! instanceof <bloom::Object>(currentSelected.get())) goto common_end;
+        if (instanceof <bloom::PointLight>(currentSelected.get())) goto common_end;
 
         ImGui::Separator();
         ImGui::Spacing();
@@ -328,7 +345,8 @@ namespace bloom {
           object->setShininess(shininess);
         }
 
-        if (instanceof <bloom::Light>(currentSelected.get())) goto common_end;
+        if (instanceof <bloom::AmbientLight>(currentSelected.get())) goto common_end;
+        if (instanceof <bloom::PointLight>(currentSelected.get())) goto common_end;
 
         ImGui::Separator();
         ImGui::Spacing();
@@ -391,34 +409,82 @@ namespace bloom {
           }
           break;
         }
-        case ObjectType::LIGHT: {
+        case ObjectType::AMBIENT_LIGHT: {
+          ImGui::Separator();
+          ImGui::Spacing();
+          ImGui::Text("Intensity");
+
+          auto light = (bloom::AmbientLight*)object;
+          glm::vec3 intensity = light->getIntensity();
+          ImGui::ColorEdit3("Intensity", glm::value_ptr(intensity));
+          if (intensity != light->getIntensity()) {
+            light->setIntensity(intensity);
+          }
+
+          break;
+        }
+        case ObjectType::POINT_LIGHT: {
+          ImGui::Separator();
+          ImGui::Spacing();
+          ImGui::Text("Intensity");
+
+          auto light = (bloom::PointLight*)object;
+          glm::vec3 intensity = light->getIntensity();
+          ImGui::ColorEdit3("Intensity", glm::value_ptr(intensity));
+          if (intensity != light->getIntensity()) {
+            light->setIntensity(intensity);
+          }
+
           break;
         }
         case ObjectType::CAMERA: {
-          if (ImGui::CollapsingHeader("Camera configuration")) {
-            switch (cameraObject->getCameraType()) {
-              case bloom::CameraType::PERSPECTIVE: {
-                if (ImGui::Button("Change to parallel")) {
-                  cameraObject->changeCameraType(CameraType::AXONOMETRIC, new double[]{});
-                }
-                break;
-              }
-              case bloom::CameraType::AXONOMETRIC: {
-                if (ImGui::Button("Change to perspective")) {
-                  int width = 1920 / 2, height = 1080 / 2;
+          ImGui::Separator();
+          ImGui::Spacing();
+          ImGui::Text("Pipeline");
 
-                  const double fov = 45.0f;
-                  const double aspect = (float)width / (float)height;
-                  const double near = 0.1f;
-                  const double far = 100.0f;
+          // Create a input list for the shading options
+          static const char* cameraType[] = {"Perspective", "Axonometric"};
 
-                  cameraObject->changeCameraType(CameraType::PERSPECTIVE,
-                                                 new double[]{fov, aspect, near, far});
-                }
-                break;
-              }
-            }
+          auto currentType = (int32_t)cameraObject->getCameraType();
+
+          ImGui::Combo("Projection", &currentType, cameraType, IM_ARRAYSIZE(cameraType),
+                       IM_ARRAYSIZE(cameraType));
+
+          if (currentType != (int32_t)cameraObject->getCameraType()) {
+            int width = 1920 / 2, height = 1080 / 2;
+
+            const double fov = 45.0f;
+            const double aspect = (float)width / (float)height;
+            const double near = 0.1f;
+            const double far = 100.0f;
+
+            cameraObject->changeCameraType((bloom::CameraType)currentType,
+                                           new double[]{fov, aspect, near, far});
           }
+
+          auto viewportU = cameraObject->getViewportU();
+          auto viewportV = cameraObject->getViewportV();
+          auto windowX = cameraObject->getWindowSizeX();
+          auto windowY = cameraObject->getWindowSizeY();
+
+          glm::vec2 editableViewportU = glm::vec2(viewportU);
+          glm::vec2 editableViewportV = glm::vec2(viewportV);
+          glm::vec2 editableWindowX = glm::vec2(windowX);
+          glm::vec2 editableWindowY = glm::vec2(windowY);
+
+          ImGui::SliderFloat2("Viewport U", glm::value_ptr(editableViewportU), -1000.0f, 1000.0f);
+          ImGui::SliderFloat2("Viewport V", glm::value_ptr(editableViewportV), -1000.0f, 1000.0f);
+          ImGui::SliderFloat2("Window X", glm::value_ptr(editableWindowX), -1000.0f, 1000.0f);
+          ImGui::SliderFloat2("Window Y", glm::value_ptr(editableWindowY), -1000.0f, 1000.0f);
+
+          if (editableViewportU != viewportU || editableViewportV != viewportV
+              || editableWindowX != windowX || editableWindowY != windowY) {
+            cameraObject->setViewportU(editableViewportU);
+            cameraObject->setViewportV(editableViewportV);
+            cameraObject->setWindowSizeX(editableWindowX);
+            cameraObject->setWindowSizeY(editableWindowY);
+          }
+
           break;
         }
       }
@@ -512,6 +578,7 @@ namespace bloom {
           if (ImGui::BeginPopupContextItem()) {
             if (ImGui::MenuItem("Delete")) {
               hierarchyObjects.erase(hierarchyObjects.begin() + i);
+              selected = -1;
             }
             ImGui::EndPopup();
           }
@@ -610,7 +677,8 @@ namespace bloom {
       ImGui::Spacing();
 
       HelpMarker(
-          "\"Color\" is just a abstraction. \nIn reality what is happening is that the color that "
+          "\"Color\" is just a abstraction. \nIn reality what is happening is that the color "
+          "that "
           "you are selecting is being set as the ambient and diffuse coeficients of the "
           "material\n");
       ImGui::ColorEdit3("Color", glm::value_ptr(resultColorCube));
@@ -637,8 +705,9 @@ namespace bloom {
     }
 
     void Light::enableGuizmo() {
-      // ImGui::Begin("Guizmo");
       if (selected == -1) return;
+      if (instanceof <bloom::Camera>(hierarchyObjects[selected].get())) return;
+      if (instanceof <bloom::AmbientLight>(hierarchyObjects[selected].get())) return;
 
       ImGuizmo::SetDrawlist(bloom::Renderer::getViewportDrawList());
       ImGuizmo::SetOrthographic(false);
@@ -656,22 +725,19 @@ namespace bloom {
 
       model = glm::translate(model, selectedModel->getAppliedTransformation());
 
-      ImGuizmo::Manipulate(glm::value_ptr(cameraObject->getViewMatrix()),
-                           glm::value_ptr(cameraObject->getProjectionMatrix()),
-                           ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::LOCAL, glm::value_ptr(model));
+      ImGuizmo::Manipulate(
+          glm::value_ptr(cameraObject->getViewMatrix()),
+          glm::value_ptr(cameraObject->getViewportMatrix() * cameraObject->getProjectionMatrix()),
+          ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::WORLD, glm::value_ptr(model));
 
-      if (ImGuizmo::IsUsing()) {
-        glm::vec3 position = glm::vec3(model[3]);
-        // selectedModel->setPosition(position);
-        ((bloom::Object*)selectedModel)->setAppliedTransformation(position);
-      }
-      // ImGui::End();
+      if (ImGuizmo::IsUsing())
+        ((bloom::Object*)selectedModel)->setAppliedTransformation(glm::vec3(model[3]));
     }
 
     void Light::guizmoController() {
       // Gray background
       ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1.00f, 1.00f, 0.13f, 1.00f));
-      ImGui::Begin("Dear");
+      ImGui::Begin("Controllers");
       {
         // Center buttons in the window
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2.0f);
@@ -693,7 +759,7 @@ namespace bloom {
       if (m_canMove) enableGuizmo();
       guizmoController();
 
-      ImGui::ShowDemoWindow();
+      // ImGui::ShowDemoWindow();
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

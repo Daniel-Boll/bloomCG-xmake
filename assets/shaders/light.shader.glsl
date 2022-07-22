@@ -6,9 +6,10 @@ layout(location = 0) in vec4 position;
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
+uniform mat4 uW2V;
 
 void main() {
-  gl_Position = uProjection * uView * uModel * position;
+  gl_Position = uW2V * uProjection * uView * uModel * position;
 }
 // -----------------------------------------------------------------
 #shader fragment

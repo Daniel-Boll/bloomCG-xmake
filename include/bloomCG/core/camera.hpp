@@ -14,7 +14,9 @@ namespace bloom {
     double m_yaw, m_pitch;
     CameraType m_cameraType;
 
-    glm::mat4 m_viewMatrix, m_projectionMatrix;
+    glm::mat4 m_viewMatrix, m_projectionMatrix, m_viewportMatrix;
+    glm::vec2 m_windowX, m_windowY;
+    glm::vec2 m_viewportV, m_viewportU;
 
     double m_cameraSpeed;
     bool m_movementEnabled;
@@ -22,6 +24,8 @@ namespace bloom {
     bool m_firstClick;
 
     float m_cameraSensitivity;
+
+    void regenerateWindow2ViewportMatrix();
 
   public:
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
@@ -34,6 +38,17 @@ namespace bloom {
 
     glm::mat4 getViewMatrix() const;
     glm::mat4 getProjectionMatrix() const;
+    glm::mat4 getViewportMatrix() const;
+
+    void setViewportU(glm::vec2 u);
+    void setViewportV(glm::vec2 v);
+    void setWindowSizeX(glm::vec2 x);
+    void setWindowSizeY(glm::vec2 y);
+
+    glm::vec2 getViewportU() const;
+    glm::vec2 getViewportV() const;
+    glm::vec2 getWindowSizeX() const;
+    glm::vec2 getWindowSizeY() const;
 
     Camera* changeCameraType(CameraType cameraType, double* args);
     Camera* toggleMovement();

@@ -75,6 +75,51 @@ namespace bloom {
 
   glm::mat4 Camera::getProjectionMatrix() const { return m_projectionMatrix; }
 
+  glm::mat4 Camera::getViewportMatrix() const { return m_viewportMatrix; }
+
+  void Camera::setViewportU(glm::vec2 u) {
+    m_viewportU = u;
+
+    regenerateWindow2ViewportMatrix();
+  }
+
+  void Camera::setViewportV(glm::vec2 v) {
+    m_viewportV = v;
+
+    regenerateWindow2ViewportMatrix();
+  }
+
+  void Camera::setWindowSizeX(glm::vec2 x) {
+    m_windowX = x;
+
+    regenerateWindow2ViewportMatrix();
+  }
+
+  void Camera::setWindowSizeY(glm::vec2 y) {
+    m_windowY = y;
+
+    regenerateWindow2ViewportMatrix();
+  }
+
+  glm::vec2 Camera::getViewportU() const { return m_viewportU; }
+  glm::vec2 Camera::getViewportV() const { return m_viewportV; }
+  glm::vec2 Camera::getWindowSizeX() const { return m_windowX; }
+  glm::vec2 Camera::getWindowSizeY() const { return m_windowY; }
+
+  void Camera::regenerateWindow2ViewportMatrix() {
+    m_viewportMatrix = glm::mat4(0.0f);
+
+    // .x --> min
+    // .y --> max
+
+    m_viewportMatrix[0][0] = (m_viewportU.y - m_viewportU.x) / (m_windowX.y - m_windowX.x);
+    m_viewportMatrix[0][3] = -m_windowX.x * (m_viewportMatrix[0][0]) + m_viewportU.x;
+    m_viewportMatrix[1][1] = (m_viewportV.y - m_viewportV.x) / (m_windowY.y - m_windowY.x);
+    m_viewportMatrix[1][3] = m_windowY.x * (m_viewportMatrix[1][1]) + m_viewportV.y;
+    m_viewportMatrix[2][2] = 1;
+    m_viewportMatrix[3][3] = 1;
+  }
+
   Camera* Camera::changeCameraType(CameraType cameraType, double* args) {
     m_cameraType = cameraType;
 

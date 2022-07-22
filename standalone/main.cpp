@@ -184,6 +184,7 @@ int main(void) {
         ImVec2 wsize = ImGui::GetWindowSize();
         // Because I use the texture from OpenGL, I need to invert the V from the UV.
         ImGui::Image((void*)(intptr_t)tex, wsize, ImVec2(0, 1), ImVec2(1, 0));
+        // ImGui::Image((void*)(intptr_t)tex, wsize);
 
         // Get the viewport of the child.
         ImGuiViewport* _viewport = ImGui::FindViewportByID(0);

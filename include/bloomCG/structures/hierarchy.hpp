@@ -9,7 +9,7 @@
 namespace bloom {
 
   // Each key represents the type of the constructor of the class
-  enum class ObjectType { CUBE, SPHERE, LIGHT, CAMERA };
+  enum class ObjectType { CUBE, SPHERE, AMBIENT_LIGHT, POINT_LIGHT, CAMERA };
   struct Objects {
     ObjectType type;
     std::string name;
@@ -18,7 +18,8 @@ namespace bloom {
     union Object {
       bloom::Sphere* sphere;
       bloom::Cube* cube;
-      bloom::Light* light;
+      bloom::AmbientLight* ambientLight;
+      bloom::PointLight* pointLight;
       bloom::Camera* camera;
     } object;
 
@@ -29,11 +30,15 @@ namespace bloom {
           return object.cube;
         case ObjectType::SPHERE:
           return object.sphere;
-        case ObjectType::LIGHT:
-          return object.light;
+        case ObjectType::AMBIENT_LIGHT:
+          return object.ambientLight;
+        case ObjectType::POINT_LIGHT:
+          return (bloom::Object*)object.pointLight;
         case ObjectType::CAMERA:
           return object.camera;
       }
+
+      return nullptr;
     }
   };
 
@@ -48,11 +53,12 @@ namespace bloom {
   // Get reference of the object by type
   template <ObjectType T> Objects& getObjectByTypeRef(int32_t index) {
     // Retrieve the index of the object in the hierarchy that matches the type and index
-    std::for_each(hierarchyObjects.begin(), hierarchyObjects.end(), [&index](Objects& object) {
-      if (object.type == T && object.index == index) {
-        index = object.index;
-      }
-    });
+    std::for_each(hierarchyObjects.begin(), hierarchyObjects.end(),
+                  [&index](const Objects& object) {
+                    if (object.type == T && object.index == index) {
+                      index = object.index;
+                    }
+                  });
 
     // Return the object
     return hierarchyObjects[index];

@@ -5,8 +5,6 @@
 namespace bloom {
   class Entity {
   public:
-    Entity();
-
     // Set and get position virtual
     virtual glm::vec3 getPosition() = 0;
     virtual void setPosition(glm::vec3 position) = 0;
