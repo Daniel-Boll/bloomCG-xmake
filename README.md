@@ -1,6 +1,5 @@
 ## Crítico
 
-- Arrumar modal de cubo
 - Adicionar modal de adição de luz
 - Adicionar controladores de view up
 - Checkbox de controlar órbita de luzes
