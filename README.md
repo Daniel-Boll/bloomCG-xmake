@@ -1,8 +1,11 @@
 ## Crítico
 
-- [~] Refazer matrix de perspectiva.
-- Separar iluminação ambiente de intensidade.
+- Arrumar o sistema de limpeza de cena
+- Adicionar modal de adição de luz
+- Adicionar controladores de view up
+- Checkbox de controlar órbita de luzes
 - Adicionar sombreamento constante
+- Adicionar gizmo global de localização
 
 ## Possíveis melhorias
 
@@ -26,8 +29,7 @@ cena, em um primeiro momento, pode ser realizada com parâmetros pré-definidos,
 - [X] 2. Adicionar limpeza da cena (completo)
 - [X] 3. Adicionar transformações de rotação e escala. (completo)
 - [ ] 4. Adicionar possibilidade de informar P, view-up e plano de projeção.
-  - [ ] 4.1 Adicionar sinalizadores
-- [ ] 5. Adicionar sombreamento constante. Bem como poder escolher qual método será aplicado.
+- [ ] 5. Adicionar sombreamento constante.
 - [X] 6. Poder definir Ka, Kd, Ks e n do objeto. (completo)
 - [X] 7. (completo)
 
