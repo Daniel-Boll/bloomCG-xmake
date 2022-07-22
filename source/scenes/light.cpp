@@ -1,8 +1,7 @@
-#include "bloomCG/models/light.hpp"
-
 #include <bloomCG/core/camera.hpp>
 #include <bloomCG/core/core.hpp>
 #include <bloomCG/core/renderer.hpp>
+#include <bloomCG/models/light.hpp>
 #include <bloomCG/scenes/light.hpp>
 #include <bloomCG/structures/hierarchy.hpp>
 #include <bloomCG/structures/shader.hpp>
@@ -27,6 +26,7 @@ namespace bloom {
     /**/ bool m_modalSphere = false;                    /**/
     /**/ bool m_editingSphere = false;                  /**/
     /**/ char* namePtrSphere;                           /**/
+    /**/ std::string errorMessageSphere = "";           /**/
     /**/ glm::vec3 resultPositionSphere;                /**/
     /**/ glm::vec3 resultColorSphere;                   /**/
     /**/ float resultRadiusSphere;                      /**/
@@ -37,6 +37,7 @@ namespace bloom {
     /**/ bool m_modalCube = false;                      /**/
     /**/ bool m_editingCube = false;                    /**/
     /**/ char* namePtrCube;                             /**/
+    /**/ std::string errorMessageCube = "";             /**/
     /**/ glm::vec3 resultPositionCube;                  /**/
     /**/ glm::vec3 resultColorCube;                     /**/
     /**/ float resultSideCube;                          /**/
@@ -614,7 +615,13 @@ namespace bloom {
         m_editingSphere = true;
       }
 
+      if (!errorMessageSphere.empty()) {
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "%s", errorMessageSphere.c_str());
+      }
+
       ImGui::InputText("Name", namePtrSphere, 64);
+      ImGui::SameLine();
+      HelpMarker("The name of the sphere *MUST* be unique.\n");
       ImGui::Separator();
 
       ImGui::InputFloat3("Position", glm::value_ptr(resultPositionSphere));
@@ -635,8 +642,15 @@ namespace bloom {
       ImGui::Spacing();
 
       if (ImGui::Button("OK", ImVec2(120, 0))) {
-        ImGui::CloseCurrentPopup();
         m_editingSphere = false;
+
+        // Check if the name is unique
+        std::string name = namePtrSphere;
+        if (std::any_of(hierarchyObjects.begin(), hierarchyObjects.end(),
+                        [name](const Objects& object) { return object.name == name; })) {
+          errorMessageSphere = fmt::format("The name \"{}\" is already in use", name);
+          goto not_adding;
+        }
 
         hierarchyObjects.emplace_back(Objects{
             ObjectType::SPHERE,
@@ -645,7 +659,9 @@ namespace bloom {
             {.sphere
              = new bloom::Sphere(resultPositionSphere, resultColorSphere, resultRadiusSphere,
                                  resultSectorSphere, resultStackSphere)}});
+        ImGui::CloseCurrentPopup();
       }
+    not_adding:
       ImGui::SetItemDefaultFocus();
       ImGui::SameLine();
       if (ImGui::Button("Cancel", ImVec2(120, 0))) {
@@ -661,19 +677,25 @@ namespace bloom {
       const std::string repeated = fmt::format("({})", size);
       const std::string cubeName = fmt::format("Cube{}", size >= 1 ? repeated : "");
 
-      if (!m_editingSphere) {
+      if (!m_editingCube) {
         std::string resultName = name ? *name : cubeName;
-        // std::string to char*
-        namePtrCube = new char[resultName.size()];
+        namePtrCube = new char[resultName.size() + (size >= 1)];
         std::copy(resultName.begin(), resultName.end(), namePtrCube);
-        // Create buffer
-        resultPositionCube = position ? *position : glm::vec3(0);
-        resultSideCube = side ? *side : .5f;
-        resultColorCube = glm::vec3(1.0f);
+
+        resultPositionCube = position ? *position : glm::vec3(0.0f);
+        resultSideCube = side ? *side : 1.0f;
+        resultColorCube = glm::vec3(1.0f, 1.0f, 1.0f);
+
         m_editingCube = true;
       }
 
+      if (!errorMessageCube.empty()) {
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "%s", errorMessageCube.c_str());
+      }
+
       ImGui::InputText("Name", namePtrCube, 64);
+      ImGui::SameLine();
+      HelpMarker("The name of the cube *MUST* be unique.\n");
       ImGui::Separator();
 
       ImGui::InputFloat3("Position", glm::value_ptr(resultPositionCube));
@@ -682,29 +704,37 @@ namespace bloom {
       ImGui::InputFloat("Side", &resultSideCube);
       ImGui::Spacing();
 
-      HelpMarker(
-          "\"Color\" is just a abstraction. \nIn reality what is happening is that the color "
-          "that "
-          "you are selecting is being set as the ambient and diffuse coeficients of the "
-          "material\n");
       ImGui::ColorEdit3("Color", glm::value_ptr(resultColorCube));
+      ImGui::SameLine();
+      HelpMarker(
+          "\"Color\" this parameter is deceiving, the color of the cube isn't real"
+          " it's simpled mapped to Ka and Kd coeficientes of the Material.\n");
       ImGui::Spacing();
 
       if (ImGui::Button("OK", ImVec2(120, 0))) {
-        ImGui::CloseCurrentPopup();
         m_editingCube = false;
+
+        // Check if the name is unique
+        std::string name = namePtrCube;
+        if (std::any_of(hierarchyObjects.begin(), hierarchyObjects.end(),
+                        [name](const Objects& object) { return object.name == name; })) {
+          errorMessageCube = fmt::format("The name \"{}\" is already in use", name);
+          goto not_adding;
+        }
 
         hierarchyObjects.emplace_back(Objects{
             ObjectType::CUBE,
             namePtrCube,
             (int32_t)getObjectByType<ObjectType::CUBE>().size(),
             {.cube = new bloom::Cube(resultPositionCube, resultSideCube, resultColorCube)}});
+        ImGui::CloseCurrentPopup();
       }
+    not_adding:
       ImGui::SetItemDefaultFocus();
       ImGui::SameLine();
-
-      if (ImGui::Button("Cancel", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-
+      if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        ImGui::CloseCurrentPopup();
+      }
       ImGui::EndPopup();
 
       m_modalCube = false;
