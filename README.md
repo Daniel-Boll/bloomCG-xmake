@@ -1,7 +1,7 @@
 ## Crítico
 
-- Adicionar "chão" com um cubo gigante como base
 - Adicionar sombreamento constante
+- Adicionar seleção por clique
 - Adicionar gizmo global de localização
 
 ## Possíveis melhorias

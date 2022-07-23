@@ -88,7 +88,7 @@ namespace bloom {
       const double fov = 45.0f;
       const double aspect = (float)width / (float)height;
       const double near = 0.1f;
-      const double far = 100.0f;
+      const double far = 1000.0f;
 
       cameraObject->setFieldOfView(fov)
           ->setAspectRatio(aspect)
@@ -101,6 +101,19 @@ namespace bloom {
           ->setCameraSensitivity(.1);
       // ======================================================
 
+      // ================ Setting up Floor ================
+      hierarchyObjects.emplace_back(
+          Objects{ObjectType::CUBE, "Floor", 0, {.cube = new bloom::Cube(glm::vec3{0})}});
+
+      // Manipulate the floor
+      bloom::Cube* floor = ((bloom::Cube*)getObjectByType<ObjectType::CUBE>(0).get());
+      floor->setAppliedTransformation(glm::vec3{0, -8, 0});
+      floor->setAppliedScale(glm::vec3{1000, 0.01, 1000});
+      floor->setColor(glm::vec3{0.5f, 0.5f, 0.5f});
+
+      // delete floor;
+      // ======================================================
+
       // ================ Setting up Sphere ================
       hierarchyObjects.emplace_back(
           Objects{ObjectType::SPHERE,
@@ -108,6 +121,7 @@ namespace bloom {
                   0,
                   {.sphere = new bloom::Sphere(glm::vec3{0, 0, 0}, glm::vec3{1, 0, 0}, 2,
                                                m_sectorCount, m_stackCount)}});
+      // ======================================================
 
       // ================ Setting up Shaders ================
       // TODO: extract this to utils.
@@ -120,8 +134,7 @@ namespace bloom {
           ->registerShader<ShaderType::Object, LightModel::Gouraud>(
               at("object.shader.gouraud.glsl"))
           ->registerShader<ShaderType::Light, LightModel::Phong>(at("light.shader.glsl"));
-
-      // ==========================================================
+      // ======================================================
 
       // =================== Lights in the scene ================
       auto ambientLight = new bloom::AmbientLight(glm::vec3{0.2f, 0.2f, 0.2f});
@@ -348,7 +361,7 @@ namespace bloom {
 
         if (instanceof <bloom::AmbientLight>(currentSelected.get())) goto common_end;
 
-        glm::vec3 position = object->getPosition();
+        glm::vec3 position = object->getAppliedTransformation();
 
         ImGui::Separator();
         ImGui::Spacing();
@@ -359,7 +372,7 @@ namespace bloom {
         // Apply position change
         // If the position has changed, we update the object's position
         if (position != object->getPosition()) {
-          object->setPosition(position);
+          object->setAppliedTransformation(position);
         }
 
         glm::vec3 appliedRotation = object->getAppliedRotation();
@@ -368,7 +381,7 @@ namespace bloom {
         if (! instanceof <bloom::Object>(currentSelected.get())) goto common_end;
 
         ImGui::SliderFloat3("Rotation", glm::value_ptr(appliedRotation), 0, 360.0f);
-        ImGui::SliderFloat3("Scale", glm::value_ptr(appliedScale), 0, 10.0f);
+        ImGui::SliderFloat3("Scale", glm::value_ptr(appliedScale), 0, 1000.0f);
 
         if (appliedRotation != object->getAppliedRotation()) {
           object->setAppliedRotation(glm::vec3(appliedRotation));
@@ -556,7 +569,7 @@ namespace bloom {
           ImGui::SliderFloat("Field of View", &fov, 0.0f, 180.0f);
           ImGui::SliderFloat("Aspect Ratio", &aspect, 0.0f, 3.0f);
           ImGui::SliderFloat("Near Plane", &near, 0.0f, 10.0f);
-          ImGui::SliderFloat("Far Plane", &far, 0.0f, 100.0f);
+          ImGui::SliderFloat("Far Plane", &far, 0.0f, 2000.0f);
           ImGui::SliderFloat3("Up", glm::value_ptr(up), -1.0f, 1.0f);
 
           if (fov != cameraObject->getFieldOfView() || aspect != cameraObject->getAspectRatio()

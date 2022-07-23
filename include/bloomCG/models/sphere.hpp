@@ -48,9 +48,8 @@ namespace bloom {
     void setRadius(float radius);
     void setSectorCount(uint16_t sectorCount);
     void setStackCount(uint16_t stackCount);
-    void setPosition(glm::vec3 position);
-    float getShininess();
 
+    void setPosition(glm::vec3 position);
     glm::vec3 getPosition();
 
     // Functionalities

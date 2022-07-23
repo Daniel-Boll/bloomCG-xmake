@@ -58,11 +58,6 @@ namespace bloom {
     void setPosition(glm::vec3 position);
 
     void setSide(float side);
-    void setColor(glm::vec3 color);
-    void setKa(glm::vec3 ka);
-    void setKd(glm::vec3 kd);
-    void setKs(glm::vec3 ks);
-    void setShininess(float shininess);
 
     float getSide();
 
