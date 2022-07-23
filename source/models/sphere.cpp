@@ -34,7 +34,8 @@ namespace bloom {
     m_layoutBuffer = new bloom::VertexBufferLayout();
     m_layoutBuffer
         ->push<float>(3)  // Three floats (coordinates)        x, y, z
-        .push<float>(3);  // Three floats (normals)            nx, ny, nz
+        .push<float>(3)   // Three floats (normals)            nx, ny, nz
+        .push<float>(3);  // Three floats (averagedNormal)            nx, ny, nz
 
     m_indexBuffer = new bloom::IndexBuffer(m_indices.data(), m_indices.size());
 
@@ -69,6 +70,7 @@ namespace bloom {
   void Sphere::clearVertex() {
     std::vector<float>().swap(m_positions);
     std::vector<float>().swap(m_normals);
+    std::vector<float>().swap(m_averageNormals);
     std::vector<uint32_t>().swap(m_indices);
   }
 
@@ -125,6 +127,12 @@ namespace bloom {
           addNormal(v2.nx, v2.ny, v2.nz);
           addNormal(v4.nx, v4.ny, v4.nz);
 
+          auto averagedNormal
+              = computeFaceNormal(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v4.x, v4.y, v4.z);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
+
           addIndices(index, index + 1, index + 2);
           index += 3;
         } else if (i == (m_stackCount - 1)) {
@@ -135,6 +143,12 @@ namespace bloom {
           addNormal(v1.nx, v1.ny, v1.nz);
           addNormal(v2.nx, v2.ny, v2.nz);
           addNormal(v3.nx, v3.ny, v3.nz);
+
+          auto averagedNormal
+              = computeFaceNormal(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
 
           addIndices(index, index + 1, index + 2);
           index += 3;
@@ -148,6 +162,13 @@ namespace bloom {
           addNormal(v2.x, v2.y, v2.z);
           addNormal(v3.x, v3.y, v3.z);
           addNormal(v4.x, v4.y, v4.z);
+
+          auto averagedNormal
+              = computeFaceNormal(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
+          addAveragedNormal(averagedNormal[0], averagedNormal[1], averagedNormal[2]);
 
           addIndices(index, index + 1, index + 2);
           addIndices(index + 2, index + 1, index + 3);
@@ -171,6 +192,10 @@ namespace bloom {
       m_vertexData.push_back(m_normals[i]);
       m_vertexData.push_back(m_normals[i + 1]);
       m_vertexData.push_back(m_normals[i + 2]);
+
+      m_vertexData.push_back(m_averageNormals[i]);
+      m_vertexData.push_back(m_averageNormals[i + 1]);
+      m_vertexData.push_back(m_averageNormals[i + 2]);
     }
   }
 
@@ -184,6 +209,12 @@ namespace bloom {
     m_normals.emplace_back(nx);
     m_normals.emplace_back(ny);
     m_normals.emplace_back(nz);
+  }
+
+  void Sphere::addAveragedNormal(float nx, float ny, float nz) {
+    m_averageNormals.emplace_back(nx);
+    m_averageNormals.emplace_back(ny);
+    m_averageNormals.emplace_back(nz);
   }
 
   void Sphere::addIndices(uint32_t a, uint32_t b, uint32_t c) {
@@ -217,5 +248,38 @@ namespace bloom {
     m_indexBuffer->unbind();
     m_vertexBuffer->unbind();
     m_vertexArray->unbind();
+  }
+
+  std::vector<float> Sphere::computeFaceNormal(float x1, float y1, float z1, float x2, float y2,
+                                               float z2, float x3, float y3, float z3) {
+    const float EPSILON = 0.000001f;
+
+    std::vector<float> normal(3, 0.0f);  // default return value (0,0,0)
+    float nx, ny, nz;
+
+    // find 2 edge vectors: v1-v2, v1-v3
+    float ex1 = x2 - x1;
+    float ey1 = y2 - y1;
+    float ez1 = z2 - z1;
+    float ex2 = x3 - x1;
+    float ey2 = y3 - y1;
+    float ez2 = z3 - z1;
+
+    // cross product: e1 x e2
+    nx = ey1 * ez2 - ez1 * ey2;
+    ny = ez1 * ex2 - ex1 * ez2;
+    nz = ex1 * ey2 - ey1 * ex2;
+
+    // normalize only if the length is > 0
+    float length = sqrtf(nx * nx + ny * ny + nz * nz);
+    if (length > EPSILON) {
+      // normalize
+      float lengthInv = 1.0f / length;
+      normal[0] = nx * lengthInv;
+      normal[1] = ny * lengthInv;
+      normal[2] = nz * lengthInv;
+    }
+
+    return normal;
   }
 }  // namespace bloom

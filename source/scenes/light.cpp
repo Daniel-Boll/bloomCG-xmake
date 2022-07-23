@@ -130,8 +130,9 @@ namespace bloom {
       auto at
           = [cd](const std::string& path) { return cd + "/../../../../assets/shaders/" + path; };
 
-      shaders->registerShader<ShaderType::Object, LightModel::Phong>(at("object.phong.glsl"))
+      shaders->registerShader<ShaderType::Object, LightModel::Flat>(at("object.flat.glsl"))
           ->registerShader<ShaderType::Object, LightModel::Gouraud>(at("object.gouraud.glsl"))
+          ->registerShader<ShaderType::Object, LightModel::Phong>(at("object.phong.glsl"))
           ->registerShader<ShaderType::Light, LightModel::Phong>(at("light.glsl"));
       // ======================================================
 
@@ -290,8 +291,7 @@ namespace bloom {
                 ->setUniform3f("uMaterial.diffuse", _object->getKd())
                 ->setUniform3f("uMaterial.specular", _object->getKs())
                 ->setUniform1f("uMaterial.shininess", _object->getShininess())
-                ->setUniform3f("uAmbientLight.intensity", ambientLight->getIntensity())
-                ->setUniform3f("uObjectColor", glm::vec3(1.0f, 0.0f, 0.0f));  // Gouraud's only
+                ->setUniform3f("uAmbientLight.intensity", ambientLight->getIntensity());
 
             auto lights = getObjectByType<ObjectType::POINT_LIGHT>();
             if (!lights.empty()) {

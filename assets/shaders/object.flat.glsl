@@ -2,9 +2,9 @@
 #version 330 core
 
 layout(location = 0) in vec4 position;
-layout(location = 1) in vec3 normals;
+layout(location = 2) in vec3 normals;
 
-out vec3 vLightColor; // Result Gouraud color
+out vec3 vLightColor; // Result Flat color
 
 uniform mat4 uModel;
 uniform mat4 uView;

@@ -28,7 +28,7 @@ namespace bloom {
     float m_radius;
     uint16_t m_sectorCount, m_stackCount;
 
-    std::vector<float> m_positions, m_normals;
+    std::vector<float> m_positions, m_normals, m_averageNormals;
     std::vector<uint32_t> m_indices;
 
     std::vector<float> m_vertexData;  // Combination of (position, normal)
@@ -69,6 +69,7 @@ namespace bloom {
 
     void addPosition(float x, float y, float z);
     void addNormal(float x, float y, float z);
+    void addAveragedNormal(float x, float y, float z);
     void addTextureCoordinates(float s, float t);
 
     // Vertex data
