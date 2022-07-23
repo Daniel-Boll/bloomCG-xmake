@@ -1,6 +1,5 @@
 ## Crítico
 
-- Adicionar sombreamento constante
 - Adicionar seleção por clique
 - Adicionar gizmo global de localização
 
@@ -27,11 +26,11 @@ cena, em um primeiro momento, pode ser realizada com parâmetros pré-definidos,
 - [X] 2. Adicionar limpeza da cena (completo)
 - [X] 3. Adicionar transformações de rotação e escala. (completo)
 - [~] 4. Adicionar possibilidade de informar P e plano de projeção.
-- [ ] 5. Adicionar sombreamento constante.
+- [X] 5. Adicionar sombreamento constante.
 - [X] 6. Poder definir Ka, Kd, Ks e n do objeto. (completo)
 - [X] 7. (completo)
 
 **Soma** *a priori* dos pontos:
 $$
-50 * 1.2 = 60
+95 * 1.2 = 114.0
 $$
