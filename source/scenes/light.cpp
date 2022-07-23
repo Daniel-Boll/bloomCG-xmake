@@ -359,7 +359,7 @@ namespace bloom {
       auto object = (bloom::Object*)currentSelected.get();
       {  // Transform
 
-        if (instanceof <bloom::AmbientLight>(currentSelected.get())) goto common_end;
+        if (instanceof <bloom::AmbientLight, bloom::Camera>(currentSelected.get())) goto common_end;
 
         glm::vec3 position = object->getAppliedTransformation();
 
@@ -527,6 +527,18 @@ namespace bloom {
           break;
         }
         case ObjectType::CAMERA: {
+          ImGui::Separator();
+          ImGui::Spacing();
+          ImGui::Text("Transform");
+
+          auto position = cameraObject->getPosition();
+
+          ImGui::InputFloat3("Position", glm::value_ptr(position));
+
+          if (position != cameraObject->getPosition()) {
+            cameraObject->setPosition(position);
+          }
+
           ImGui::Separator();
 
           auto sensibility = cameraObject->getCameraSensitivity();
