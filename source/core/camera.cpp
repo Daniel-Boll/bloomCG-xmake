@@ -120,7 +120,7 @@ namespace bloom {
     m_viewportMatrix[3][3] = 1;
   }
 
-  Camera* Camera::changeCameraType(CameraType cameraType, double* args) {
+  Camera* Camera::changeCameraType(CameraType cameraType) {
     m_cameraType = cameraType;
 
     switch (cameraType) {
@@ -129,19 +129,14 @@ namespace bloom {
         // to calculate the view matrix.
         m_projectionMatrix = glm::mat4(1.0f);
 
-        // Change 2,2 to 0
+        // Change 2,2 to 0 (z-axis)
         m_projectionMatrix[2][2] = 0.0f;
 
         break;
       }
 
       case CameraType::PERSPECTIVE: {
-        const double fov = args[0];
-        const double aspectRatio = args[1];
-        const double nearPlane = args[2];
-        const double farPlane = args[3];
-
-        m_projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
+        m_projectionMatrix = glm::perspective(glm::radians(m_fov), m_aspectRatio, m_near, m_far);
       }
     }
 
@@ -168,18 +163,70 @@ namespace bloom {
     return this;
   }
 
-  void Camera::setPosition(glm::vec3 position) { m_cameraPosition = position; }
-  void Camera::setFront(glm::vec3 front) { m_cameraFront = front; }
-  void Camera::setUp(glm::vec3 up) { m_cameraUp = up; }
-  void Camera::setYaw(double yaw) { m_yaw = yaw; }
-  void Camera::setPitch(double pitch) { m_pitch = pitch; }
+  Camera* Camera::setCameraPosition(glm::vec3 position) {
+    m_cameraPosition = position;
+    return this;
+  }
+
+  Camera* Camera::setNearPlane(float near) {
+    m_near = near;
+    changeCameraType(m_cameraType);
+    return this;
+  }
+
+  Camera* Camera::setFarPlane(float far) {
+    m_far = far;
+    changeCameraType(m_cameraType);
+    return this;
+  }
+
+  Camera* Camera::setFieldOfView(float fov) {
+    m_fov = fov;
+    changeCameraType(m_cameraType);
+    return this;
+  }
+
+  Camera* Camera::setAspectRatio(float aspectRatio) {
+    m_aspectRatio = aspectRatio;
+    changeCameraType(m_cameraType);
+    return this;
+  }
+
+  Camera* Camera::setFront(glm::vec3 front) {
+    m_cameraFront = front;
+    return this;
+  }
+
+  Camera* Camera::setUp(glm::vec3 up) {
+    m_cameraUp = up;
+    changeCameraType(m_cameraType);
+    return this;
+  }
+
+  Camera* Camera::setYaw(double yaw) {
+    m_yaw = yaw;
+    return this;
+  }
+
+  Camera* Camera::setPitch(double pitch) {
+    m_pitch = pitch;
+    return this;
+  }
 
   glm::vec3 Camera::getPosition() { return m_cameraPosition; }
+  void Camera::setPosition(glm::vec3 position) { m_cameraPosition = position; }
   glm::vec3 Camera::getFront() const { return m_cameraFront; }
   glm::vec3 Camera::getUp() const { return m_cameraUp; }
 
   double Camera::getYaw() const { return m_yaw; }
   double Camera::getPitch() const { return m_pitch; }
+
+  float Camera::getCameraSensitivity() const { return m_cameraSensitivity; }
+  float Camera::getFieldOfView() const { return m_fov; }
+  float Camera::getAspectRatio() const { return m_aspectRatio; }
+  float Camera::getNearPlane() const { return m_near; }
+  float Camera::getFarPlane() const { return m_far; }
+  double Camera::getCameraSpeed() const { return m_cameraSpeed; }
 
   CameraType Camera::getCameraType() const { return m_cameraType; }
 }  // namespace bloom

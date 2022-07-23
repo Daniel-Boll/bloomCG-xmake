@@ -27,7 +27,7 @@ cena, em um primeiro momento, pode ser realizada com parâmetros pré-definidos,
 - [X] 1. (completo)
 - [X] 2. Adicionar limpeza da cena (completo)
 - [X] 3. Adicionar transformações de rotação e escala. (completo)
-- [ ] 4. Adicionar possibilidade de informar P, view-up e plano de projeção.
+- [~] 4. Adicionar possibilidade de informar P e plano de projeção.
 - [ ] 5. Adicionar sombreamento constante.
 - [X] 6. Poder definir Ka, Kd, Ks e n do objeto. (completo)
 - [X] 7. (completo)

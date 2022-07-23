@@ -18,6 +18,8 @@ namespace bloom {
     glm::vec2 m_windowX, m_windowY;
     glm::vec2 m_viewportV, m_viewportU;
 
+    float m_fov, m_aspectRatio, m_near, m_far;
+
     double m_cameraSpeed;
     bool m_movementEnabled;
     bool m_mouseMovementEnabled;
@@ -50,23 +52,33 @@ namespace bloom {
     glm::vec2 getWindowSizeX() const;
     glm::vec2 getWindowSizeY() const;
 
-    Camera* changeCameraType(CameraType cameraType, double* args);
+    Camera* changeCameraType(CameraType cameraType);
     Camera* toggleMovement();
     Camera* toggleMouseMovement();
     Camera* setCameraSpeed(double speed);
     Camera* setCameraSensitivity(float sensitivity);
-
+    Camera* setCameraPosition(glm::vec3 position);
+    Camera* setNearPlane(float near);
+    Camera* setFarPlane(float far);
+    Camera* setFieldOfView(float fov);
+    Camera* setAspectRatio(float aspectRatio);
+    Camera* setFront(glm::vec3 front);
+    Camera* setUp(glm::vec3 up);
+    Camera* setYaw(double yaw);
+    Camera* setPitch(double pitch);
     void setPosition(glm::vec3 position);
-    void setFront(glm::vec3 front);
-    void setUp(glm::vec3 up);
-    void setYaw(double yaw);
-    void setPitch(double pitch);
 
     glm::vec3 getPosition();
     glm::vec3 getFront() const;
     glm::vec3 getUp() const;
     double getYaw() const;
     double getPitch() const;
+    float getCameraSensitivity() const;
+    float getFieldOfView() const;
+    float getAspectRatio() const;
+    float getNearPlane() const;
+    float getFarPlane() const;
+    double getCameraSpeed() const;
 
     CameraType getCameraType() const;
   };

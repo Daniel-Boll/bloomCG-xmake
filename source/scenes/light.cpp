@@ -90,7 +90,11 @@ namespace bloom {
       const double near = 0.1f;
       const double far = 100.0f;
 
-      cameraObject->changeCameraType(CameraType::PERSPECTIVE, new double[]{fov, aspect, near, far})
+      cameraObject->setFieldOfView(fov)
+          ->setAspectRatio(aspect)
+          ->setNearPlane(near)
+          ->setFarPlane(far)
+          ->changeCameraType(CameraType::PERSPECTIVE)
           ->toggleMovement()
           ->toggleMouseMovement()
           ->setCameraSpeed(2.5f)
@@ -492,6 +496,20 @@ namespace bloom {
         }
         case ObjectType::CAMERA: {
           ImGui::Separator();
+
+          auto sensibility = cameraObject->getCameraSensitivity();
+          auto speed = (float)cameraObject->getCameraSpeed();
+
+          ImGui::SliderFloat("Sensibility", &sensibility, 0.0f, 2.0f);
+          ImGui::SliderFloat("Speed", &speed, 0.0f, 30.0f);
+
+          if (sensibility != cameraObject->getCameraSensitivity()
+              || speed != cameraObject->getCameraSpeed()) {
+            cameraObject->setCameraSensitivity(sensibility);
+            cameraObject->setCameraSpeed(speed);
+          }
+
+          ImGui::Spacing();
           ImGui::Spacing();
           ImGui::Text("Pipeline");
 
@@ -504,16 +522,36 @@ namespace bloom {
                        IM_ARRAYSIZE(cameraType));
 
           if (currentType != (int32_t)cameraObject->getCameraType()) {
-            int width = 1920 / 2, height = 1080 / 2;
-
-            const double fov = 45.0f;
-            const double aspect = (float)width / (float)height;
-            const double near = 0.1f;
-            const double far = 100.0f;
-
-            cameraObject->changeCameraType((bloom::CameraType)currentType,
-                                           new double[]{fov, aspect, near, far});
+            cameraObject->changeCameraType((bloom::CameraType)currentType);
           }
+
+          ImGui::Spacing();
+          ImGui::Text("Perspective information");
+
+          auto fov = cameraObject->getFieldOfView();
+          auto aspect = cameraObject->getAspectRatio();
+          auto near = cameraObject->getNearPlane();
+          auto far = cameraObject->getFarPlane();
+          auto up = cameraObject->getUp();
+
+          ImGui::SliderFloat("Field of View", &fov, 0.0f, 180.0f);
+          ImGui::SliderFloat("Aspect Ratio", &aspect, 0.0f, 3.0f);
+          ImGui::SliderFloat("Near Plane", &near, 0.0f, 10.0f);
+          ImGui::SliderFloat("Far Plane", &far, 0.0f, 100.0f);
+          ImGui::SliderFloat3("Up", glm::value_ptr(up), -1.0f, 1.0f);
+
+          if (fov != cameraObject->getFieldOfView() || aspect != cameraObject->getAspectRatio()
+              || near != cameraObject->getNearPlane() || far != cameraObject->getFarPlane()
+              || up != cameraObject->getUp()) {
+            cameraObject->setFieldOfView(fov);
+            cameraObject->setAspectRatio(aspect);
+            cameraObject->setNearPlane(near);
+            cameraObject->setFarPlane(far);
+            cameraObject->setUp(up);
+          }
+
+          ImGui::Spacing();
+          ImGui::Text("Viewport information");
 
           auto viewportU = cameraObject->getViewportU();
           auto viewportV = cameraObject->getViewportV();
