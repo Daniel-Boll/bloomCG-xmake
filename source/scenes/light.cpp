@@ -8,6 +8,7 @@
 #include <bloomCG/utils/imgui.hpp>
 #include <bloomCG/utils/polymorphism.hpp>
 
+#include "GLFW/glfw3.h"
 #include "imgui.h"
 
 namespace bloom {
@@ -16,6 +17,7 @@ namespace bloom {
 
     bool m_wireframe = false;
     bool m_depthBuffer = true;
+    bool m_orbitLights = true;
 
     // clang-format off
     // +++++++++++++++++++ MODAL +++++++++++++++++++++++++
@@ -65,6 +67,9 @@ namespace bloom {
     // ==== Scene controllers ====
     bool m_canMove = true;
     bool m_isPaused = false;
+
+    std::array<double, 8> randomVelocities;
+    std::array<double, 8> randomDistances;
 
     Light::Light() : m_translation(0.0f, 0.0f, 0.0f) {
       GLCall(glad_glEnable(GL_BLEND));
@@ -130,7 +135,7 @@ namespace bloom {
       for (int i = 0; i < lightCount; i++) {
         hierarchyObjects.emplace_back(
             Objects{ObjectType::POINT_LIGHT,
-                    fmt::format("Point Light_{}", i),
+                    fmt::format("Point Light{}", i == 0 ? "" : fmt::format(" ({})", i)),
                     i,
                     {.pointLight = new bloom::PointLight(lightPositions[i])}});
       }
@@ -140,17 +145,53 @@ namespace bloom {
       cameraObject->setViewportV(glm::vec2{-1, 1});
       cameraObject->setWindowSizeX(glm::vec2{-1, 1});
       cameraObject->setWindowSizeY(glm::vec2{-1, 1});
+
+      // Generate 8 random values between
+      for (int i = 0; i < 8; i++) {
+        randomVelocities[i] = .5 + std::rand() / ((RAND_MAX + 1u) / 2.5);
+        randomDistances[i] = 3.0 + std::rand() / ((RAND_MAX + 1u) / 2.);
+      }
     }
 
     void Light::onUpdate(const float deltaTime) {
       if (m_isPaused) return;
 
       cameraObject->update(deltaTime);
-      // Update light position based on m_translation
-      // ((bloom::PointLight*)getObjectByType<ObjectType::POINT_LIGHT>(0).get())
-      //     ->setAppliedTransformation(m_translation);
-      // ((bloom::PointLight*)getObjectByType<ObjectType::POINT_LIGHT>(1).get())
-      //     ->setAppliedTransformation(-m_translation);
+
+      if (m_orbitLights) {
+        // Get all point lights
+        for (auto& object : getObjectByType<ObjectType::POINT_LIGHT>()) {
+          auto pointLight = (bloom::PointLight*)object.get();
+          auto tick = glfwGetTime();
+          auto index = object.index;
+          auto randomVelocity = randomVelocities[index];
+          auto randomDistance = randomDistances[index];
+
+          // Get the position of the light
+          glm::vec3 position = pointLight->getAppliedTransformation();
+
+          if (index % 4 == 0) {
+            position.x = sin(randomVelocity * tick) * randomDistance;
+            position.y = cos(randomVelocity * tick) * randomDistance;
+            position.z = sin(randomVelocity * tick) * randomDistance;
+          } else if (index % 4 == 1) {
+            position.x = sin(randomVelocity * tick) * randomDistance;
+            position.y = cos(randomVelocity * tick) * randomDistance;
+            position.z = cos(randomVelocity * tick) * randomDistance;
+          } else if (index % 4 == 2) {
+            position.x = cos(randomVelocity * tick) * randomDistance;
+            position.y = sin(randomVelocity * tick) * randomDistance;
+            position.z = sin(randomVelocity * tick) * randomDistance;
+          } else {
+            position.x = cos(randomVelocity * tick) * randomDistance;
+            position.y = sin(randomVelocity * tick) * randomDistance;
+            position.z = cos(randomVelocity * tick) * randomDistance;
+          }
+
+          // Set the new position of the light.
+          pointLight->setAppliedTransformation(position);
+        }
+      }
     }
 
     void Light::onRender(const float deltaTime) {
@@ -169,9 +210,9 @@ namespace bloom {
       lightShader->unbind();
 
       // Move the light in a orbit around the center
-      m_translation.x = sin(glfwGetTime() * 3) * 3.0f;
-      m_translation.z = cos(glfwGetTime() * 3) * 3.0f;
-      m_translation.y = sin(glfwGetTime() * 3) * 3.0f;
+      // m_translation.x = sin(glfwGetTime() * 3) * 3.0f;
+      // m_translation.z = cos(glfwGetTime() * 3) * 3.0f;
+      // m_translation.y = sin(glfwGetTime() * 3) * 3.0f;
 
       if (m_wireframe) {
         GLCall(glad_glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
@@ -530,6 +571,7 @@ namespace bloom {
         if (ImGui::BeginMenu(ICON_FA_GAMEPAD " Scene controllers")) {
           ImGui::Checkbox("Wireframe", &m_wireframe);
           ImGui::Checkbox("Depth buffer", &m_depthBuffer);
+          ImGui::Checkbox("Orbit lights", &m_orbitLights);
           ImGui::EndMenu();
         }
 
@@ -756,7 +798,7 @@ namespace bloom {
     void Light::addLight(std::string* name, glm::vec3* position) {
       const auto size = getObjectByType<ObjectType::POINT_LIGHT>().size();
       const std::string repeated = fmt::format("({})", size);
-      const std::string cubeName = fmt::format("Point Light_{}", size >= 1 ? repeated : "");
+      const std::string cubeName = fmt::format("Point Light {}", size >= 1 ? repeated : "");
 
       if (!m_editingLight) {
         std::string resultName = name ? *name : cubeName;

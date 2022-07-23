@@ -1,8 +1,8 @@
 ## Crítico
 
-- Checkbox de controlar órbita de luzes
 - Adicionar controladores de view up
 - Adicionar controladores de atenuação das luzes
+- Adicionar "chão" com um cubo gigante como base
 - Adicionar sombreamento constante
 - Adicionar gizmo global de localização
 
