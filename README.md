@@ -1,6 +1,5 @@
 ## Crítico
 
-- Adicionar controladores de view up e controladores de atenuação das luzes
 - Adicionar "chão" com um cubo gigante como base
 - Adicionar sombreamento constante
 - Adicionar gizmo global de localização

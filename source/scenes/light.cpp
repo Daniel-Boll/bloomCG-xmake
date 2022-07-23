@@ -492,6 +492,25 @@ namespace bloom {
             light->setIntensity(intensity);
           }
 
+          ImGui::Separator();
+          ImGui::Spacing();
+          ImGui::Text("Attenuation");
+
+          float constant = light->getConstant();
+          float linear = light->getLinear();
+          float quadratic = light->getQuadratic();
+
+          ImGui::SliderFloat("Constant", &constant, 0.0f, 1.0f, "%.2f");
+          ImGui::SliderFloat("Linear", &linear, 0.0f, 1.0f, "%.3f");
+          ImGui::SliderFloat("Quadratic", &quadratic, 0.0f, 1.0f, "%.4f");
+
+          if (constant != light->getConstant() || linear != light->getLinear()
+              || quadratic != light->getQuadratic()) {
+            light->setConstant(constant);
+            light->setLinear(linear);
+            light->setQuadratic(quadratic);
+          }
+
           break;
         }
         case ObjectType::CAMERA: {
