@@ -9,6 +9,7 @@
 #include <bloomCG/utils/polymorphism.hpp>
 
 #include "GLFW/glfw3.h"
+#include "ImGuizmo.h"
 #include "imgui.h"
 
 namespace bloom {
@@ -532,7 +533,7 @@ namespace bloom {
 
           auto position = cameraObject->getPosition();
 
-          ImGui::InputFloat3("Position", glm::value_ptr(position));
+          ImGui::SliderFloat3("Position", glm::value_ptr(position), -100.0f, 100.0f);
 
           if (position != cameraObject->getPosition()) {
             cameraObject->setPosition(position);
@@ -943,7 +944,6 @@ namespace bloom {
     }
 
     void Light::enableGuizmo() {
-      if (selected == -1) return;
       if (instanceof <bloom::Camera>(hierarchyObjects[selected].get())) return;
       if (instanceof <bloom::AmbientLight>(hierarchyObjects[selected].get())) return;
 
@@ -957,6 +957,16 @@ namespace bloom {
       float windowHeight = bloom::Renderer::getViewportHeight();
 
       ImGuizmo::SetRect(windowPosX, windowPosY, windowWidth, windowHeight);
+
+      float viewManipulateRight = windowPosX + windowWidth;
+      float viewManipulateTop = windowPosY;
+
+      auto viewMatrix = cameraObject->getViewMatrix();
+      ImGuizmo::ViewManipulate(glm::value_ptr(viewMatrix), -4.f,
+                               ImVec2(viewManipulateRight - 128, viewManipulateTop),
+                               ImVec2(128, 128), 0x11111110);
+
+      if (selected == -1) return;
 
       glm::mat4 model = glm::mat4(1.0f);
       auto selectedModel = (bloom::Object*)hierarchyObjects[selected].get();
@@ -996,8 +1006,6 @@ namespace bloom {
       inspector();
       if (m_canMove) enableGuizmo();
       guizmoController();
-
-      // ImGui::ShowDemoWindow();
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

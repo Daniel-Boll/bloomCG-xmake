@@ -1,6 +1,5 @@
 ## Crítico
 
-- Adicionar seleção por clique
 - Adicionar gizmo global de localização
 
 ## Possíveis melhorias
