@@ -88,6 +88,35 @@ The code is built using [`xmake`](https://xmake.io/) and the dependencies are in
 
 </details>
 
+<details>
+  <summary>
+    Gizmos
+  </summary>  
+  
+  <br />
+  <p>You can control elements through the gizmos changing their position. You can also notice the scene orientation through the mapped cube in the top right.</p>
+  
+  <p align="center">
+    <img src="https://user-images.githubusercontent.com/43689101/180625549-26a18747-95da-46df-83b9-a31c26a65c03.png" width=500 />
+  </p>
+
+</details>
+
+
+<details>
+  <summary>
+    Controllers
+  </summary>  
+  
+  <br />
+  <p>You can also control whether to show or not the movement gizmo, scale the scene, clear the elements all through this controller section in the top of the engine.</p>
+  
+  <p align="center">
+    <img src="https://user-images.githubusercontent.com/43689101/180625571-941fa314-c290-409b-bb50-da12f01c6f84.png" width=300 />
+  </p>
+  
+</details>
+
 ## Features
 
 ### Objects
