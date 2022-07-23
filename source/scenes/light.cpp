@@ -958,14 +958,6 @@ namespace bloom {
 
       ImGuizmo::SetRect(windowPosX, windowPosY, windowWidth, windowHeight);
 
-      float viewManipulateRight = windowPosX + windowWidth;
-      float viewManipulateTop = windowPosY;
-
-      auto viewMatrix = cameraObject->getViewMatrix();
-      ImGuizmo::ViewManipulate(glm::value_ptr(viewMatrix), -4.f,
-                               ImVec2(viewManipulateRight - 128, viewManipulateTop),
-                               ImVec2(128, 128), 0x11111110);
-
       if (selected == -1) return;
 
       glm::mat4 model = glm::mat4(1.0f);
@@ -997,8 +989,28 @@ namespace bloom {
         selectableButton(ICON_FA_SEARCH_MINUS, &decoy);
         selectableButton(ICON_FA_PAINT_ROLLER, &decoy);
       }
+
       ImGui::End();
       ImGui::PopStyleColor(1);
+
+      ImGuizmo::SetDrawlist(bloom::Renderer::getViewportDrawList());
+      ImGuizmo::SetOrthographic(false);
+
+      float windowPosX = bloom::Renderer::getViewportX();
+      float windowPosY = bloom::Renderer::getViewportY();
+
+      float windowWidth = bloom::Renderer::getViewportWidth();
+      float windowHeight = bloom::Renderer::getViewportHeight();
+
+      ImGuizmo::SetRect(windowPosX, windowPosY, windowWidth, windowHeight);
+
+      float viewManipulateRight = windowPosX + windowWidth;
+      float viewManipulateTop = windowPosY;
+
+      auto viewMatrix = cameraObject->getViewMatrix();
+      ImGuizmo::ViewManipulate(glm::value_ptr(viewMatrix), -4.f,
+                               ImVec2(viewManipulateRight - 128, viewManipulateTop),
+                               ImVec2(128, 128), 0x11111110);
     }
 
     void Light::onImGuiRender() {
