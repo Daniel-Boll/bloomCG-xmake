@@ -130,10 +130,9 @@ namespace bloom {
       auto at
           = [cd](const std::string& path) { return cd + "/../../../../assets/shaders/" + path; };
 
-      shaders->registerShader<ShaderType::Object, LightModel::Phong>(at("object.shader.phong.glsl"))
-          ->registerShader<ShaderType::Object, LightModel::Gouraud>(
-              at("object.shader.gouraud.glsl"))
-          ->registerShader<ShaderType::Light, LightModel::Phong>(at("light.shader.glsl"));
+      shaders->registerShader<ShaderType::Object, LightModel::Phong>(at("object.phong.glsl"))
+          ->registerShader<ShaderType::Object, LightModel::Gouraud>(at("object.gouraud.glsl"))
+          ->registerShader<ShaderType::Light, LightModel::Phong>(at("light.glsl"));
       // ======================================================
 
       // =================== Lights in the scene ================
