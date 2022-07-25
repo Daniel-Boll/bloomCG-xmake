@@ -27,3 +27,16 @@ target("BloomCG")
   add_files("standalone/main.cpp")
   add_packages(table.unpack(libs))
   add_deps("bloom_lib")
+  after_build(function (target)
+    -- Import task module
+    import("core.project.task")
+
+    -- Run the hello task
+    local dir = target:targetdir()
+
+    -- Remove any imgui.ini existent in the target directory
+    os.rm(dir .. "/imgui.ini")
+
+    -- Move imgui.ini to the target directory
+    os.cp("imgui.ini", dir)
+  end)
