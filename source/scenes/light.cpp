@@ -8,9 +8,7 @@
 #include <bloomCG/utils/imgui.hpp>
 #include <bloomCG/utils/polymorphism.hpp>
 
-#include "GLFW/glfw3.h"
 #include "ImGuizmo.h"
-#include "imgui.h"
 
 namespace bloom {
   namespace scene {
@@ -68,6 +66,8 @@ namespace bloom {
     // ==== Scene controllers ====
     bool m_canMove = true;
     bool m_isPaused = false;
+    bool m_increaseWindow = false;
+    bool m_decreaseWindow = false;
 
     std::array<double, 8> randomVelocities;
     std::array<double, 8> randomDistances;
@@ -968,9 +968,9 @@ namespace bloom {
     }
 
     void Light::enableGuizmo() {
-      if (instanceof <bloom::Camera>(hierarchyObjects[selected].get())) return;
-      if (instanceof <bloom::AmbientLight>(hierarchyObjects[selected].get())) return;
       if (selected == -1) return;
+
+      if (instanceof <bloom::Camera, bloom::AmbientLight>(hierarchyObjects[selected].get())) return;
       if (!hierarchyObjects[selected].visible) return;
 
       ImGuizmo::SetDrawlist(bloom::Renderer::getViewportDrawList());
@@ -1009,11 +1009,26 @@ namespace bloom {
 
         selectableButton(ICON_FA_ARROWS_ALT, &m_canMove);
         selectableButton(m_isPaused ? ICON_FA_PLAY : ICON_FA_PAUSE, &m_isPaused);
-        selectableButton(ICON_FA_SEARCH_PLUS, &decoy);
-        selectableButton(ICON_FA_SEARCH_MINUS, &decoy);
+        selectableButton(ICON_FA_SEARCH_PLUS, &m_increaseWindow);
+        selectableButton(ICON_FA_SEARCH_MINUS, &m_decreaseWindow);
         selectableButton(ICON_FA_PAINT_ROLLER, &decoy);
-      }
 
+        if (m_decreaseWindow) {
+          auto windowX = cameraObject->getWindowSizeX();
+          auto windowY = cameraObject->getWindowSizeY();
+
+          cameraObject->setWindowSizeX(glm::vec2{windowX.x - 1.0, windowX.y + 1.0});
+          cameraObject->setWindowSizeY(glm::vec2{windowY.x - 1.0, windowY.y + 1.0});
+          m_decreaseWindow = false;
+        } else if (m_increaseWindow) {
+          auto windowX = cameraObject->getWindowSizeX();
+          auto windowY = cameraObject->getWindowSizeY();
+
+          cameraObject->setWindowSizeX(glm::vec2{windowX.x + 1.0, windowX.y - 1.0});
+          cameraObject->setWindowSizeY(glm::vec2{windowY.x + 1.0, windowY.y - 1.0});
+          m_increaseWindow = false;
+        }
+      }
       ImGui::End();
       ImGui::PopStyleColor(1);
 

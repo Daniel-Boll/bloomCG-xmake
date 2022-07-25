@@ -13,6 +13,9 @@
   x;                       \
   ASSERT(bloom::gl::logCall());
 
+// A macro to print the function name
+#define FUNCTION_SIGNATURE() fmt::print("{}:{}\n", __FUNCTION__, __LINE__);
+
 namespace bloom {
   class gl {
   private:

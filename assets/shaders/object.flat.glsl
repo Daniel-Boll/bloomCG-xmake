@@ -4,7 +4,7 @@
 layout(location = 0) in vec4 position;
 layout(location = 2) in vec3 normals;
 
-out vec3 vLightColor; // Result Flat color
+out vec3 vLightColor; // Result Gouraud color
 
 uniform mat4 uModel;
 uniform mat4 uView;

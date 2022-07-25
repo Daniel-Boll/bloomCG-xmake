@@ -12,7 +12,7 @@ namespace bloom {
 
   class Object : public Entity {
   public:
-    enum class Shading { FLAT, GOURAUD, PHONG };
+    enum class Shading { FLAT, GOURAUD, PHONG, BLINN };
 
     glm::vec3 m_objectKa, m_objectKd, m_objectKs;
     float m_objectShininess;
