@@ -240,6 +240,8 @@ namespace bloom {
 
       // Loop through the hierarchyObjects and draw them
       for (auto& object : hierarchyObjects) {
+        if (!object.visible) continue;
+
         switch (object.type) {
           case ObjectType::CUBE:
           case ObjectType::SPHERE: {
@@ -300,6 +302,11 @@ namespace bloom {
                 std::string prefix = fmt::format("uPointLights[{}].", light.index);
                 auto _light = (bloom::PointLight*)light.get();
 
+                if (!light.visible) {
+                  shader->setUniform3f(prefix + "intensity", glm::vec3{0});
+                  continue;
+                }
+
                 shader->setUniform3f(prefix + "position", _light->getAppliedTransformation())
                     ->setUniform3f(prefix + "intensity", _light->getIntensity())
                     ->setUniform1f(prefix + "constant", 1.0f)
@@ -355,6 +362,19 @@ namespace bloom {
       Objects currentSelected = hierarchyObjects[selected];
 
       TextCentered(currentSelected.name);
+
+      // Disable visibility checkbox
+      if (currentSelected.type != ObjectType::CAMERA
+          && currentSelected.type != ObjectType::AMBIENT_LIGHT) {
+        bool visible = currentSelected.visible;
+
+        ImGui::Checkbox(
+            fmt::format("{} Object visibility", (visible ? (ICON_FA_EYE) : (ICON_FA_EYE_SLASH)))
+                .c_str(),
+            &visible);
+
+        if (visible != currentSelected.visible) hierarchyObjects[selected].visible = visible;
+      }
 
       auto object = (bloom::Object*)currentSelected.get();
       {  // Transform
@@ -716,6 +736,8 @@ namespace bloom {
           const auto object = hierarchyObjects[i];
           // Get the index of the object in the std::vector
 
+          if (!object.visible) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+
           if (ImGui::Selectable(object.name.c_str(), selected == i)) {
             selected = i;
           }
@@ -726,6 +748,8 @@ namespace bloom {
             }
             ImGui::EndPopup();
           }
+
+          if (!object.visible) ImGui::PopStyleColor();
         }
       }
 
@@ -946,6 +970,8 @@ namespace bloom {
     void Light::enableGuizmo() {
       if (instanceof <bloom::Camera>(hierarchyObjects[selected].get())) return;
       if (instanceof <bloom::AmbientLight>(hierarchyObjects[selected].get())) return;
+      if (selected == -1) return;
+      if (!hierarchyObjects[selected].visible) return;
 
       ImGuizmo::SetDrawlist(bloom::Renderer::getViewportDrawList());
       ImGuizmo::SetOrthographic(false);
@@ -957,8 +983,6 @@ namespace bloom {
       float windowHeight = bloom::Renderer::getViewportHeight();
 
       ImGuizmo::SetRect(windowPosX, windowPosY, windowWidth, windowHeight);
-
-      if (selected == -1) return;
 
       glm::mat4 model = glm::mat4(1.0f);
       auto selectedModel = (bloom::Object*)hierarchyObjects[selected].get();

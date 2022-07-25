@@ -23,6 +23,16 @@ namespace bloom {
       bloom::Camera* camera;
     } object;
 
+    // The variables from below are not necessary in the default constructor
+    bool visible;
+
+    Objects(ObjectType type, const std::string& name, int32_t index, Object object,
+            bool is_visible = true)
+        : type(type), name(name), index(index), object(object), visible(is_visible) {}
+
+    // Create a empty constructor for non-pointer types
+    Objects() {}
+
     bloom::Entity* get() {
       // Check for the current type of the struct, then return the object
       switch (type) {
