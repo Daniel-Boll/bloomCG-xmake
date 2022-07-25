@@ -16,6 +16,14 @@ The code dependencies are:
 The code is built using [`xmake`](https://xmake.io/) and the dependencies are installed automatically through
 [`xrepo`](https://github.com/xmake-io/xrepo).
 
+## TL;DR
+
+To run it.
+
+```
+xmake && xmake run
+```
+
 ## Showcase
 
 <details>
